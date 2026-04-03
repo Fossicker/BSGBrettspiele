@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mittwoch – Wann hast du Zeit?</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181a24;
+    --border: #2a2d3a;
+    --accent: #6ee7a0;
+    --accent-dim: rgba(110, 231, 160, 0.12);
+    --accent-glow: rgba(110, 231, 160, 0.25);
+    --text: #e8e9ed;
+    --text-dim: #8b8fa3;
+    --danger: #f87171;
+    --danger-dim: rgba(248, 113, 113, 0.12);
+    --orange: #fbbf24;
+    --orange-dim: rgba(251, 191, 36, 0.12);
+    --red-soft: #f87171;
+    --red-soft-dim: rgba(248, 113, 113, 0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96, 165, 250, 0.12);
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -40%; left: -20%;
+    width: 80vw; height: 80vw;
+    background: radial-gradient(circle, rgba(110,231,160,0.04) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -30%; right: -10%;
+    width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(110,180,231,0.03) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .app {
+    position: relative; z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 48px; }
+  .header .tag {
+    display: inline-block;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-dim);
+    padding: 6px 14px; border-radius: 20px; margin-bottom: 20px;
+  }
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 6vw, 3rem);
+    font-weight: 400; line-height: 1.15; margin-bottom: 12px;
+  }
+  .header h1 span { color: var(--accent); }
+  .header p {
+    font-size: 15px; color: var(--text-dim);
+    font-weight: 300; max-width: 420px; margin: 0 auto;
+  }
+  .reset-info { font-size: 12px; color: var(--text-dim); margin-top: 10px; opacity: 0.7; }
+
+  /* Status bar */
+  .status-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; margin-bottom: 32px;
+    font-size: 13px; color: var(--text-dim);
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--danger);
+    transition: background 0.3s;
+  }
+  .status-dot.connected { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px;
+    margin-bottom: 24px; transition: border-color 0.3s;
+  }
+  .card:hover { border-color: rgba(110,231,160,0.2); }
+  .card-title {
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 18px;
+  }
+
+  /* Name grid */
+  .name-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .name-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 8px;
+    color: var(--text); font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .name-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .name-btn.selected {
+    border-color: var(--accent); background: var(--accent-dim);
+    color: var(--accent); box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .custom-name-row { display: flex; gap: 10px; margin-top: 12px; }
+  .custom-name-row input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; color: var(--text);
+    font-family: 'Outfit', sans-serif; font-size: 14px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .custom-name-row input:focus { border-color: var(--accent); }
+  .custom-name-row input::placeholder { color: var(--text-dim); }
+  .add-btn {
+    background: var(--accent-dim); border: 1px solid rgba(110,231,160,0.3);
+    border-radius: 10px; padding: 12px 18px; color: var(--accent);
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .add-btn:hover { background: rgba(110,231,160,0.2); }
+
+  /* Option grid */
+  .option-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .option-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 10px;
+    color: var(--text); font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .option-btn .icon { margin-right: 6px; }
+  .option-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .option-btn.selected {
+    border-color: var(--accent); background: var(--accent-dim);
+    color: var(--accent); box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .option-btn.selected[data-type="later"] {
+    border-color: var(--orange); background: var(--orange-dim);
+    color: var(--orange); box-shadow: 0 0 20px rgba(251,191,36,0.2);
+  }
+  .option-btn.selected[data-type="tbd"] {
+    border-color: var(--blue); background: var(--blue-dim);
+    color: var(--blue); box-shadow: 0 0 20px rgba(96,165,250,0.2);
+  }
+  .option-btn.selected[data-type="no"] {
+    border-color: var(--red-soft); background: var(--red-soft-dim);
+    color: var(--red-soft); box-shadow: 0 0 20px rgba(248,113,113,0.2);
+  }
+
+  /* Submit */
+  .submit-btn {
+    width: 100%; background: var(--accent); border: none;
+    border-radius: 12px; padding: 16px;
+    font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600;
+    color: var(--bg); cursor: pointer; transition: all 0.25s;
+    letter-spacing: 0.5px; margin-top: 8px;
+  }
+  .submit-btn:hover { box-shadow: 0 4px 30px var(--accent-glow); transform: translateY(-1px); }
+  .submit-btn:active { transform: translateY(0); }
+  .submit-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* Results table */
+  .results-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 18px;
+  }
+  .results-count { font-size: 13px; color: var(--text-dim); }
+
+  .results-table {
+    width: 100%; border-collapse: separate;
+    border-spacing: 0; overflow: hidden;
+    border-radius: 12px; border: 1px solid var(--border);
+  }
+  .results-table thead th {
+    background: rgba(110,231,160,0.06);
+    padding: 14px 16px; font-size: 12px; font-weight: 600;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--accent); text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .results-table thead th:first-child { border-radius: 11px 0 0 0; }
+  .results-table thead th:last-child { border-radius: 0 11px 0 0; }
+  .results-table tbody tr { transition: background 0.15s; }
+  .results-table tbody tr:hover { background: rgba(110,231,160,0.03); }
+  .results-table tbody td {
+    padding: 14px 16px; font-size: 14px;
+    border-bottom: 1px solid var(--border); vertical-align: middle;
+  }
+  .results-table tbody tr:last-child td { border-bottom: none; }
+
+  .option-cell { font-weight: 600; white-space: nowrap; font-size: 15px; }
+  .option-cell.time-color { color: var(--accent); }
+  .option-cell.later-color { color: var(--orange); }
+  .option-cell.tbd-color { color: var(--blue); }
+  .option-cell.no-color { color: var(--red-soft); }
+
+  .count-cell { text-align: center; }
+  .count-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; height: 32px;
+    background: var(--accent-dim); color: var(--accent);
+    border-radius: 8px; font-weight: 700; font-size: 15px;
+  }
+  .count-badge.later { background: var(--orange-dim); color: var(--orange); }
+  .count-badge.tbd { background: var(--blue-dim); color: var(--blue); }
+  .count-badge.no { background: var(--red-soft-dim); color: var(--red-soft); }
+
+  .name-tag {
+    display: inline-block; background: var(--bg);
+    border: 1px solid var(--border); padding: 4px 10px;
+    border-radius: 6px; font-size: 13px;
+    margin: 2px 4px 2px 0; cursor: default;
+  }
+  .name-tag .remove-x {
+    display: inline-block; margin-left: 6px;
+    color: var(--text-dim); cursor: pointer;
+    font-weight: 600; transition: color 0.15s;
+  }
+  .name-tag .remove-x:hover { color: var(--danger); }
+
+  .no-results {
+    text-align: center; padding: 32px;
+    color: var(--text-dim); font-size: 14px; font-weight: 300;
+  }
+  .loading {
+    text-align: center; padding: 24px; color: var(--text-dim); font-size: 14px;
+  }
+  .loading .spinner {
+    display: inline-block; width: 20px; height: 20px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--accent); color: var(--bg);
+    padding: 12px 24px; border-radius: 10px;
+    font-size: 14px; font-weight: 600; opacity: 0;
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .fade-in { animation: fadeUp 0.5s ease both; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+
+  @media (max-width: 500px) {
+    .results-table thead th, .results-table tbody td { padding: 10px 10px; font-size: 13px; }
+    .name-tag { font-size: 12px; padding: 3px 7px; }
+    .option-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header fade-in">
+    <div class="tag">Wöchentliche Umfrage</div>
+    <h1>Wann hast du am <span>Mittwoch</span> Zeit?</h1>
+    <p>Wähle deinen Namen und deine Verfügbarkeit.</p>
+    <div class="reset-info">Wird automatisch jeden Freitag zurückgesetzt</div>
+  </div>
+
+  <div class="status-bar fade-in">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Verbinde mit Datenbank…</span>
+  </div>
+
+  <div class="card fade-in delay-1">
+    <div class="card-title">1 · Dein Name</div>
+    <div class="name-grid" id="nameGrid"></div>
+    <div class="custom-name-row">
+      <input type="text" id="customName" placeholder="Oder neuen Namen eingeben…" maxlength="20">
+      <button class="add-btn" onclick="addCustomName()">+ Hinzufügen</button>
+    </div>
+  </div>
+
+  <div class="card fade-in delay-2">
+    <div class="card-title">2 · Deine Verfügbarkeit</div>
+    <div class="option-grid" id="optionGrid"></div>
+  </div>
+
+  <div class="fade-in delay-3">
+    <button class="submit-btn" id="submitBtn" onclick="submitVote()" disabled>Eintragen</button>
+  </div>
+
+  <div class="card fade-in delay-3" style="margin-top: 32px;">
+    <div class="results-header">
+      <div class="card-title" style="margin-bottom:0;">Ergebnisse</div>
+      <div class="results-count" id="resultsCount"></div>
+    </div>
+    <div id="resultsList">
+      <div class="loading"><span class="spinner"></span>Lade Daten…</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================
+     FIREBASE SETUP – Anleitung:
+
+     1. Gehe zu https://console.firebase.google.com
+     2. Neues Projekt erstellen (z.B. "mittwoch-umfrage")
+     3. "Realtime Database" erstellen (Standort: europe-west1)
+     4. Regeln setzen auf:
+        {
+          "rules": {
+            ".read": true,
+            ".write": true
+          }
+        }
+     5. Unter Projekteinstellungen → "App hinzufügen" → Web (</>)
+     6. Die firebaseConfig-Werte unten ersetzen mit deinen eigenen
+
+     GITHUB PAGES:
+     1. Neues GitHub Repository erstellen
+     2. Diese Datei als "index.html" hochladen
+     3. Settings → Pages → Branch "main" → Save
+     4. Deine Seite ist live unter: https://DEINNAME.github.io/REPO/
+     ============================================================ -->
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+  // =====================================================
+  //  🔥 HIER DEINE FIREBASE-CONFIG EINTRAGEN:
+  // =====================================================
+  const firebaseConfig = {
+    apiKey:            "DEIN_API_KEY",
+    authDomain:        "DEIN_PROJEKT.firebaseapp.com",
+    databaseURL:       "https://DEIN_PROJEKT-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId:         "DEIN_PROJEKT",
+    storageBucket:     "DEIN_PROJEKT.appspot.com",
+    messagingSenderId: "123456789",
+    appId:             "1:123456789:web:abcdef"
+  };
+  // =====================================================
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // --- CONFIG ---
+  const DEFAULT_NAMES = ['Alex', 'Chris', 'David', 'Emma', 'Julia', 'Max', 'Mia', 'Tom'];
+
+  const OPTIONS = [
+    { label: '15:30 Uhr',          value: '15:30',               icon: '🕒', type: 'time' },
+    { label: '16:30 Uhr',          value: '16:30',               icon: '🕓', type: 'time' },
+    { label: '17:00 Uhr',          value: '17:00',               icon: '🕔', type: 'time' },
+    { label: '17:30 Uhr',          value: '17:30',               icon: '🕔', type: 'time' },
+    { label: 'Später',             value: 'Spaeter',             icon: '⏳', type: 'later' },
+    { label: 'Sage noch Bescheid', value: 'Sage_noch_Bescheid',  icon: '💬', type: 'tbd' },
+    { label: 'Kann leider nicht',  value: 'Kann_leider_nicht',   icon: '✗',  type: 'no' },
+  ];
+
+  // --- STATE ---
+  let selectedName = null;
+  let selectedOption = null;
+  let names = [...DEFAULT_NAMES];
+  let votes = [];
+  let isConnected = false;
+
+  // --- WEEK ID (resets on Friday) ---
+  function getResetWeekId() {
+    const now = new Date();
+    const day = now.getDay();
+    const daysSinceFri = (day + 2) % 7;
+    const lastFriday = new Date(now);
+    lastFriday.setDate(now.getDate() - daysSinceFri);
+    lastFriday.setHours(0, 0, 0, 0);
+    return lastFriday.toISOString().slice(0, 10);
+  }
+
+  function getDbRef() {
+    return db.ref('umfrage/' + getResetWeekId());
+  }
+
+  // --- CONNECTION STATUS ---
+  db.ref('.info/connected').on('value', snap => {
+    isConnected = snap.val() === true;
+    document.getElementById('statusDot').classList.toggle('connected', isConnected);
+    document.getElementById('statusText').textContent = isConnected
+      ? 'Live verbunden – Echtzeit-Updates aktiv'
+      : 'Verbindung wird hergestellt…';
+  });
+
+  // --- REALTIME LISTENER ---
+  getDbRef().on('value', snapshot => {
+    const data = snapshot.val();
+    if (data) {
+      votes = data.votes ? Object.values(data.votes) : [];
+      names = data.names ? data.names : [...DEFAULT_NAMES];
+    } else {
+      votes = [];
+      names = [...DEFAULT_NAMES];
+    }
+    renderNames();
+    renderResults();
+  });
+
+  // --- FIREBASE WRITE ---
+  async function saveToFirebase() {
+    try {
+      await getDbRef().set({ votes, names });
+    } catch (e) {
+      console.error('Firebase Fehler:', e);
+      showToast('Fehler beim Speichern!');
+    }
+  }
+
+  // --- RENDER ---
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function renderNames() {
+    document.getElementById('nameGrid').innerHTML = names.map(n =>
+      `<button class="name-btn ${selectedName === n ? 'selected' : ''}" onclick="selectName('${n.replace(/'/g, "\\'")}')">${esc(n)}</button>`
+    ).join('');
+  }
+
+  function renderOptions() {
+    document.getElementById('optionGrid').innerHTML = OPTIONS.map(o => {
+      const sel = selectedOption === o.value ? 'selected' : '';
+      return `<button class="option-btn ${sel}" data-type="${o.type}" onclick="selectOption('${o.value}')">`
+        + `<span class="icon">${o.icon}</span> ${esc(o.label)}</button>`;
+    }).join('');
+  }
+
+  function getOptionMeta(value) {
+    return OPTIONS.find(x => x.value === value) || { label: value, icon: '', type: 'time' };
+  }
+
+  function renderResults() {
+    const list = document.getElementById('resultsList');
+    const count = document.getElementById('resultsCount');
+
+    if (votes.length === 0) {
+      list.innerHTML = '<div class="no-results">Noch keine Einträge diese Woche</div>';
+      count.textContent = ''; return;
+    }
+
+    // Group by option
+    const grouped = {};
+    votes.forEach(v => {
+      if (!grouped[v.option]) grouped[v.option] = [];
+      grouped[v.option].push(v.name);
+    });
+
+    const optionOrder = OPTIONS.map(o => o.value);
+    const sortedKeys = Object.keys(grouped).sort((a, b) =>
+      optionOrder.indexOf(a) - optionOrder.indexOf(b)
+    );
+
+    count.textContent = `${votes.length} Einträge`;
+
+    let html = `<table class="results-table">
+      <thead><tr>
+        <th>Auswahl</th>
+        <th style="text-align:center;">Anzahl</th>
+        <th>Personen</th>
+      </tr></thead><tbody>`;
+
+    sortedKeys.forEach(optVal => {
+      const people = grouped[optVal];
+      const meta = getOptionMeta(optVal);
+      const colorClass = meta.type === 'time' ? 'time-color'
+        : meta.type === 'later' ? 'later-color'
+        : meta.type === 'tbd' ? 'tbd-color' : 'no-color';
+      const badgeClass = meta.type === 'time' ? '' : meta.type;
+
+      const tags = people.map(n =>
+        `<span class="name-tag">${esc(n)}<span class="remove-x" onclick="deleteVote('${n.replace(/'/g, "\\'")}','${optVal}')" title="Entfernen">✕</span></span>`
+      ).join('');
+
+      html += `<tr>
+        <td class="option-cell ${colorClass}">${meta.icon} ${esc(meta.label)}</td>
+        <td class="count-cell"><span class="count-badge ${badgeClass}">${people.length}</span></td>
+        <td class="names-cell">${tags}</td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    list.innerHTML = html;
+  }
+
+  function updateSubmitBtn() {
+    document.getElementById('submitBtn').disabled = !(selectedName && selectedOption);
+  }
+
+  // --- ACTIONS ---
+  function selectName(name) { selectedName = name; renderNames(); updateSubmitBtn(); }
+  function selectOption(val) { selectedOption = val; renderOptions(); updateSubmitBtn(); }
+
+  async function addCustomName() {
+    const input = document.getElementById('customName');
+    const name = input.value.trim();
+    if (!name) return;
+    if (!names.includes(name)) names.push(name);
+    selectName(name); input.value = '';
+    await saveToFirebase(); renderNames();
+  }
+
+  document.getElementById('customName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addCustomName();
+  });
+
+  async function submitVote() {
+    if (!selectedName || !selectedOption) return;
+    const existing = votes.findIndex(v => v.name === selectedName);
+    const meta = getOptionMeta(selectedOption);
+
+    if (existing !== -1) {
+      votes[existing].option = selectedOption;
+      showToast(`${selectedName} aktualisiert → ${meta.label}`);
+    } else {
+      votes.push({ name: selectedName, option: selectedOption });
+      showToast(`${selectedName} → ${meta.label}`);
+    }
+
+    await saveToFirebase();
+    selectedName = null; selectedOption = null;
+    renderNames(); renderOptions(); updateSubmitBtn();
+  }
+
+  async function deleteVote(name, optVal) {
+    const idx = votes.findIndex(v => v.name === name && v.option === optVal);
+    if (idx === -1) return;
+    votes.splice(idx, 1);
+    await saveToFirebase();
+    showToast(`${name} wurde entfernt`);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // --- INIT ---
+  renderNames();
+  renderOptions();
+</script>
+</body>
+</html>
