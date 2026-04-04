@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📤 CSV-Import · Teilnehmer</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .header .tag { color:var(--wood); background:var(--wood-dim); border-color:rgba(139,94,52,0.15); }
+  .upload-zone {
+    border:2px dashed var(--border); border-radius:14px; padding:40px 20px;
+    text-align:center; cursor:pointer; transition:all 0.3s; background:var(--bg-warm);
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color:var(--wood); background:var(--wood-dim); }
+  .upload-zone .icon { font-size:36px; margin-bottom:10px; }
+  .upload-zone p { font-size:14px; color:var(--text-mid); font-weight:500; }
+  .upload-zone small { font-size:12px; color:var(--text-dim); display:block; margin-top:8px; }
+  .upload-zone input { display:none; }
+
+  .format-box { background:var(--bg-warm); border:1.5px solid var(--border); border-radius:10px; padding:16px; margin-top:16px; }
+  .format-box h3 { font-family:'Fraunces',serif; font-size:15px; font-weight:700; margin-bottom:8px; }
+  .format-box code {
+    display:block; background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:12px; font-size:12px; line-height:1.6;
+    overflow-x:auto; white-space:pre; color:var(--text-mid);
+  }
+
+  .name-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+  .name-chip-preview {
+    background:var(--bg-warm); border:1.5px solid var(--border); border-radius:9px;
+    padding:8px 16px; font-size:14px; font-weight:600; color:var(--text);
+  }
+  .preview-count { font-size:13px; color:var(--text-dim); font-weight:600; margin-top:12px; }
+
+  .import-btn {
+    width:100%; background:var(--wood); border:none; border-radius:11px;
+    padding:14px; font-family:'Nunito',sans-serif; font-size:15px; font-weight:700;
+    color:#fff; cursor:pointer; transition:all 0.25s; margin-top:16px;
+    box-shadow:0 2px 8px rgba(139,94,52,0.2);
+  }
+  .import-btn:hover { box-shadow:0 4px 20px rgba(139,94,52,0.3); transform:translateY(-1px); }
+  .import-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .status-msg { text-align:center; padding:16px; font-size:14px; font-weight:600; border-radius:10px; margin-top:16px; }
+  .status-msg.success { background:var(--teal-dim); color:var(--teal); }
+  .status-msg.error { background:var(--danger-dim); color:var(--danger); }
+  .status-msg.warning { background:var(--amber-dim); color:var(--amber); }
+
+  .current-section { margin-top:20px; }
+  .current-section h3 { font-family:'Fraunces',serif; font-size:15px; font-weight:700; margin-bottom:10px; }
+
+  .mode-toggle { display:flex; gap:0; margin-bottom:16px; border-radius:10px; overflow:hidden; border:1.5px solid var(--border); }
+  .mode-btn {
+    flex:1; padding:10px; text-align:center; font-family:'Nunito',sans-serif;
+    font-size:13px; font-weight:700; cursor:pointer; transition:all 0.2s;
+    background:var(--bg-warm); color:var(--text-dim); border:none;
+  }
+  .mode-btn.active { background:var(--wood); color:#fff; }
+  .mode-btn:hover:not(.active) { background:var(--wood-dim); color:var(--wood); }
+
+  /* Manual add */
+  .manual-row { display:flex; gap:8px; margin-bottom:16px; }
+  .manual-row input { flex:1; }
+  .manual-add-btn {
+    background:var(--wood-dim); border:1.5px solid rgba(139,94,52,0.2); border-radius:9px;
+    padding:10px 16px; color:var(--wood); font-family:'Nunito',sans-serif;
+    font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  .manual-add-btn:hover { background:rgba(139,94,52,0.12); }
+
+  .name-list-item {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; background:var(--bg-warm); border:1.5px solid var(--border);
+    border-radius:9px; margin-bottom:6px;
+  }
+  .name-list-item span { font-weight:600; font-size:14px; }
+  .name-remove {
+    background:none; border:none; color:var(--text-dim); cursor:pointer;
+    font-size:14px; padding:2px 6px; border-radius:5px; transition:all 0.15s;
+  }
+  .name-remove:hover { color:var(--danger); background:var(--danger-dim); }
+
+  .toast { background:var(--wood); }
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <a href="index.html" class="nav-link"><span class="nav-icon">🎲</span>Umfrage</a>
+  <a href="inventar.html" class="nav-link"><span class="nav-icon">📦</span>Inventar</a>
+  <a href="vorschlaege.html" class="nav-link"><span class="nav-icon">💡</span>Vorschläge</a>
+  <a href="abstimmung.html" class="nav-link"><span class="nav-icon">🗳️</span>Abstimmung</a>
+  <a href="impressum.html" class="nav-link"><span class="nav-icon">⚖️</span>Impressum</a>
+</div></nav>
+
+<div class="app">
+  <div class="header fade-in">
+    <div class="tag">👥 Teilnehmer</div>
+    <h1>Teilnehmer verwalten</h1>
+    <p>Verwalte die Liste der Teilnehmer. Diese Namen erscheinen auf allen Seiten zur Auswahl.</p>
+  </div>
+
+  <!-- Current names -->
+  <div class="card fade-in delay-1">
+    <div class="card-title">👥 Aktuelle Teilnehmer</div>
+    <div class="manual-row">
+      <input class="form-input" id="manualName" placeholder="Neuen Namen eingeben…" maxlength="30">
+      <button class="manual-add-btn" onclick="addManualName()">+ Hinzufügen</button>
+    </div>
+    <div id="currentNames"><div class="no-results">Lade…</div></div>
+  </div>
+
+  <!-- CSV Import -->
+  <div class="card fade-in delay-2">
+    <div class="card-title">📄 CSV-Import</div>
+
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modeReplace" onclick="setMode('replace')">🔄 Ersetzen</button>
+      <button class="mode-btn" id="modeAppend" onclick="setMode('append')">➕ Hinzufügen</button>
+    </div>
+
+    <div class="format-box">
+      <h3>CSV-Format (ein Name pro Zeile):</h3>
+      <code>Name
+Alex
+Chris
+David
+Emma
+Julia
+Max
+Mia
+Tom</code>
+    </div>
+    <small style="color:var(--text-dim);display:block;margin-top:10px;">
+      Erste Zeile = Header (wird übersprungen) · Ein Name pro Zeile
+    </small>
+
+    <div style="margin-top:16px;">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📄</div>
+        <p>CSV-Datei hierher ziehen oder klicken</p>
+        <small>.csv oder .txt Datei</small>
+        <input type="file" id="fileInput" accept=".csv,.txt">
+      </div>
+    </div>
+
+    <div id="preview"></div>
+    <button class="import-btn" id="importBtn" onclick="importToFirebase()" disabled>📤 Importieren</button>
+    <div id="statusMsg"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let parsedNames = [];
+let importMode = 'replace'; // 'replace' or 'append'
+
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// Render current names from Firebase (reactive)
+function renderCurrentNames() {
+  const container = document.getElementById('currentNames');
+  if (!DEFAULT_NAMES.length) {
+    container.innerHTML = '<div class="no-results">Noch keine Teilnehmer hinterlegt</div>';
+    return;
+  }
+  container.innerHTML = DEFAULT_NAMES.map((n, i) =>
+    `<div class="name-list-item">
+      <span>${esc(n)}</span>
+      <button class="name-remove" onclick="removeName(${i})" title="Entfernen">✕</button>
+    </div>`
+  ).join('');
+}
+
+onNamesReady(() => renderCurrentNames());
+// Also re-render when names change
+db.ref('teilnehmer').on('value', () => { if (_namesLoaded) renderCurrentNames(); });
+
+// Manual add
+async function addManualName() {
+  const input = document.getElementById('manualName');
+  const name = input.value.trim();
+  if (!name) return;
+  if (DEFAULT_NAMES.includes(name)) { showToast(`"${name}" existiert bereits!`); return; }
+  const newList = [...DEFAULT_NAMES, name];
+  try {
+    await db.ref('teilnehmer').set(newList);
+    showToast(`"${name}" hinzugefügt!`);
+    input.value = '';
+  } catch (e) { showToast('Fehler beim Speichern!'); }
+}
+
+document.getElementById('manualName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addManualName();
+});
+
+// Remove single name
+async function removeName(idx) {
+  const name = DEFAULT_NAMES[idx];
+  if (!confirm(`"${name}" wirklich entfernen?`)) return;
+  const newList = DEFAULT_NAMES.filter((_, i) => i !== idx);
+  try {
+    await db.ref('teilnehmer').set(newList);
+    showToast(`"${name}" entfernt`);
+  } catch (e) { showToast('Fehler!'); }
+}
+
+// Mode toggle
+function setMode(mode) {
+  importMode = mode;
+  document.getElementById('modeReplace').classList.toggle('active', mode === 'replace');
+  document.getElementById('modeAppend').classList.toggle('active', mode === 'append');
+  if (parsedNames.length) renderPreview();
+}
+
+// Drag & Drop
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  parsedNames = [];
+  // Skip header if first line looks like a header
+  const start = (lines[0] && lines[0].toLowerCase().includes('name')) ? 1 : 0;
+  for (let i = start; i < lines.length; i++) {
+    const name = lines[i].replace(/;/g, '').trim();
+    if (name && !parsedNames.includes(name)) parsedNames.push(name);
+  }
+  renderPreview();
+  document.getElementById('importBtn').disabled = parsedNames.length === 0;
+  document.getElementById('statusMsg').innerHTML = '';
+}
+
+function renderPreview() {
+  if (!parsedNames.length) {
+    document.getElementById('preview').innerHTML = '<div class="status-msg error">Keine gültigen Namen gefunden.</div>';
+    return;
+  }
+
+  const finalNames = importMode === 'replace'
+    ? parsedNames
+    : [...new Set([...DEFAULT_NAMES, ...parsedNames])];
+
+  const modeText = importMode === 'replace'
+    ? `🔄 Ersetzt alle ${DEFAULT_NAMES.length} bestehenden Namen`
+    : `➕ Fügt ${parsedNames.filter(n => !DEFAULT_NAMES.includes(n)).length} neue Namen hinzu`;
+
+  let h = `<div class="preview-count">${modeText}</div>`;
+  h += `<div class="preview-count">Ergebnis: <b>${finalNames.length} Teilnehmer</b></div>`;
+  h += '<div class="name-chips">';
+  finalNames.forEach(n => {
+    const isNew = importMode === 'append' && !DEFAULT_NAMES.includes(n);
+    const style = isNew ? 'border-color:var(--teal);color:var(--teal)' : '';
+    h += `<span class="name-chip-preview" style="${style}">${esc(n)}${isNew ? ' ✨' : ''}</span>`;
+  });
+  h += '</div>';
+  document.getElementById('preview').innerHTML = h;
+}
+
+async function importToFirebase() {
+  if (!parsedNames.length) return;
+
+  const btn = document.getElementById('importBtn');
+  const status = document.getElementById('statusMsg');
+  btn.disabled = true;
+  btn.textContent = '⏳ Importiere…';
+
+  const finalNames = importMode === 'replace'
+    ? parsedNames
+    : [...new Set([...DEFAULT_NAMES, ...parsedNames])];
+
+  try {
+    await db.ref('teilnehmer').set(finalNames);
+    status.innerHTML = `<div class="status-msg success">✅ ${finalNames.length} Teilnehmer gespeichert!</div>`;
+    btn.textContent = '✅ Import abgeschlossen';
+    showToast(`${finalNames.length} Teilnehmer importiert!`);
+  } catch (e) {
+    console.error(e);
+    status.innerHTML = '<div class="status-msg error">❌ Fehler beim Import. Prüfe die Firebase-Config.</div>';
+    btn.textContent = '📤 Erneut versuchen';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

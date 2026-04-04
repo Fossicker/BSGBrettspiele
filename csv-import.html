@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📤 CSV-Import ins Inventar</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .header .tag { color:var(--teal); background:var(--teal-dim); border-color:rgba(42,125,110,0.15); }
+  .upload-zone {
+    border:2px dashed var(--border);
+    border-radius:14px; padding:40px 20px;
+    text-align:center; cursor:pointer;
+    transition:all 0.3s; background:var(--bg-warm);
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color:var(--teal); background:var(--teal-dim);
+  }
+  .upload-zone .icon { font-size:36px; margin-bottom:10px; }
+  .upload-zone p { font-size:14px; color:var(--text-mid); font-weight:500; }
+  .upload-zone small { font-size:12px; color:var(--text-dim); display:block; margin-top:8px; }
+  .upload-zone input { display:none; }
+
+  .format-box {
+    background:var(--bg-warm); border:1.5px solid var(--border);
+    border-radius:10px; padding:16px; margin-top:16px;
+  }
+  .format-box h3 { font-family:'Fraunces',serif; font-size:15px; font-weight:700; margin-bottom:8px; }
+  .format-box code {
+    display:block; background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:12px; font-size:12px; line-height:1.6;
+    overflow-x:auto; white-space:pre; color:var(--text-mid);
+  }
+
+  .preview-table {
+    width:100%; border-collapse:separate; border-spacing:0;
+    border-radius:10px; border:1.5px solid var(--border); overflow:hidden;
+    margin-top:16px;
+  }
+  .preview-table thead th {
+    background:var(--bg-warm); padding:10px 12px;
+    font-size:11px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; color:var(--teal);
+    text-align:left; border-bottom:1.5px solid var(--border);
+  }
+  .preview-table tbody td {
+    padding:8px 12px; font-size:13px;
+    border-bottom:1px solid var(--border-light);
+  }
+  .preview-table tbody tr:last-child td { border-bottom:none; }
+  .preview-table tbody tr:hover { background:rgba(42,125,110,0.03); }
+
+  .preview-count {
+    font-size:13px; color:var(--text-dim); font-weight:600;
+    margin-top:12px;
+  }
+
+  .import-btn {
+    width:100%; background:var(--teal); border:none; border-radius:11px;
+    padding:14px; font-family:'Nunito',sans-serif; font-size:15px; font-weight:700;
+    color:#fff; cursor:pointer; transition:all 0.25s; margin-top:16px;
+    box-shadow:0 2px 8px rgba(42,125,110,0.2);
+  }
+  .import-btn:hover { box-shadow:0 4px 20px rgba(42,125,110,0.3); transform:translateY(-1px); }
+  .import-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .status-msg {
+    text-align:center; padding:16px;
+    font-size:14px; font-weight:600; border-radius:10px; margin-top:16px;
+  }
+  .status-msg.success { background:var(--teal-dim); color:var(--teal); }
+  .status-msg.error { background:var(--danger-dim); color:var(--danger); }
+
+  .toast { background:var(--teal); }
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <a href="index.html" class="nav-link"><span class="nav-icon">🎲</span>Umfrage</a>
+  <a href="inventar.html" class="nav-link"><span class="nav-icon">📦</span>Inventar</a>
+  <a href="vorschlaege.html" class="nav-link"><span class="nav-icon">💡</span>Vorschläge</a>
+  <a href="abstimmung.html" class="nav-link"><span class="nav-icon">🗳️</span>Abstimmung</a>
+  <a href="impressum.html" class="nav-link"><span class="nav-icon">⚖️</span>Impressum</a>
+</div></nav>
+
+<div class="app">
+  <div class="header fade-in">
+    <div class="tag">📤 Import</div>
+    <h1>CSV-Import</h1>
+    <p>Lade eine CSV-Datei hoch, um das Spiele-Inventar in einem Schritt zu befüllen.</p>
+  </div>
+
+  <div class="card fade-in delay-1">
+    <div class="card-title">📄 CSV-Format</div>
+    <div class="format-box">
+      <h3>So muss die CSV aufgebaut sein:</h3>
+      <code>Name;MinSpieler;MaxSpieler;Dauer;Genre;Ursprung;Anmerkungen;BGG-Link
+Catan;3;4;60-90 Min.;Strategie;BSG;;https://boardgamegeek.com/boardgame/13/catan
+Codenames;2;8;15 Min.;Party;Spende;Sehr beliebt;
+Pandemic;2;4;45 Min.;Kooperativ;BSG;;</code>
+    </div>
+    <small style="color:var(--text-dim);display:block;margin-top:10px;">
+      Trennzeichen: <b>Semikolon (;)</b> · Erste Zeile = Header (wird übersprungen) · Leere Felder sind OK
+    </small>
+  </div>
+
+  <div class="card fade-in delay-2">
+    <div class="card-title">📂 Datei auswählen</div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📄</div>
+      <p>CSV-Datei hierher ziehen oder klicken</p>
+      <small>.csv Datei mit Semikolon-Trennung</small>
+      <input type="file" id="fileInput" accept=".csv,.txt">
+    </div>
+
+    <div id="preview"></div>
+    <button class="import-btn" id="importBtn" onclick="importToFirebase()" disabled>📤 In Firebase importieren</button>
+    <div id="statusMsg"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let parsedGames = [];
+
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// Drag & Drop
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    parseCSV(text);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) {
+    showToast('CSV enthält keine Daten!');
+    return;
+  }
+
+  // Skip header
+  parsedGames = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(';');
+    if (!cols[0] || !cols[0].trim()) continue; // Skip empty rows
+
+    parsedGames.push({
+      name: cols[0]?.trim() || null,
+      minPlayers: parseInt(cols[1]?.trim()) || null,
+      maxPlayers: parseInt(cols[2]?.trim()) || null,
+      duration: cols[3]?.trim() || null,
+      genre: cols[4]?.trim() || null,
+      origin: cols[5]?.trim() || null,
+      notes: cols[6]?.trim() || null,
+      bgaLink: cols[7]?.trim() || null,
+      addedAt: new Date().toISOString()
+    });
+  }
+
+  renderPreview();
+  document.getElementById('importBtn').disabled = parsedGames.length === 0;
+  document.getElementById('statusMsg').innerHTML = '';
+}
+
+function renderPreview() {
+  if (!parsedGames.length) {
+    document.getElementById('preview').innerHTML = '<div class="status-msg error">Keine gültigen Einträge gefunden.</div>';
+    return;
+  }
+
+  let h = `<div class="preview-count">✅ ${parsedGames.length} Spiele erkannt</div>`;
+  h += `<table class="preview-table"><thead><tr>
+    <th>Spiel</th><th>Spieler</th><th>Dauer</th><th>Genre</th><th>Ursprung</th>
+  </tr></thead><tbody>`;
+
+  parsedGames.forEach(g => {
+    const players = (g.minPlayers && g.maxPlayers) ? `${g.minPlayers}–${g.maxPlayers}` : (g.minPlayers ? `${g.minPlayers}+` : '–');
+    const origin = g.origin ? `<span class="origin-badge ${(g.origin||'').toLowerCase()}">${esc(g.origin)}</span>` : '–';
+    h += `<tr>
+      <td style="font-weight:700">${esc(g.name)}</td>
+      <td>${players}</td>
+      <td>${esc(g.duration || '–')}</td>
+      <td>${esc(g.genre || '–')}</td>
+      <td>${origin}</td>
+    </tr>`;
+  });
+
+  h += '</tbody></table>';
+  document.getElementById('preview').innerHTML = h;
+}
+
+async function importToFirebase() {
+  if (!parsedGames.length) return;
+
+  const btn = document.getElementById('importBtn');
+  const status = document.getElementById('statusMsg');
+  btn.disabled = true;
+  btn.textContent = '⏳ Importiere…';
+
+  try {
+    const updates = {};
+    parsedGames.forEach(g => {
+      const key = db.ref('inventar').push().key;
+      updates[key] = g;
+    });
+
+    await db.ref('inventar').update(updates);
+
+    status.innerHTML = `<div class="status-msg success">✅ ${parsedGames.length} Spiele erfolgreich importiert! <a href="inventar.html" style="color:var(--teal);font-weight:700">→ Zum Inventar</a></div>`;
+    btn.textContent = '✅ Import abgeschlossen';
+    showToast(`${parsedGames.length} Spiele importiert!`);
+  } catch (e) {
+    console.error(e);
+    status.innerHTML = '<div class="status-msg error">❌ Fehler beim Import. Prüfe die Firebase-Config.</div>';
+    btn.textContent = '📤 Erneut versuchen';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

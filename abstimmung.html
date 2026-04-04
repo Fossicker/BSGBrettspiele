@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎲 Brettspiel-Abend · Abstimmung</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .header .tag { color:var(--blue); background:var(--blue-dim); border-color:rgba(59,111,160,0.15); }
+
+  .name-section { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .name-section .label { font-size:13px; color:var(--text-dim); font-weight:600; margin-right:4px; }
+  .name-chip {
+    background:var(--bg-warm); border:1.5px solid var(--border); border-radius:9px;
+    padding:8px 14px; color:var(--text); font-family:'Nunito',sans-serif;
+    font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;
+  }
+  .name-chip:hover { border-color:var(--blue); background:var(--blue-dim); }
+  .name-chip.selected { border-color:var(--blue); background:var(--blue-dim); color:var(--blue); box-shadow:0 0 0 3px rgba(59,111,160,0.12); }
+
+  .vote-grid { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+  .vote-card {
+    background:var(--bg-warm); border:1.5px solid var(--border); border-radius:12px;
+    overflow:hidden; transition:all 0.2s; position:relative;
+  }
+  .vote-card:hover { border-color:var(--blue); }
+  .vote-card.voted { border-color:var(--blue); background:var(--blue-dim); }
+  .vote-card-header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 16px; cursor:pointer; gap:8px;
+  }
+  .vote-card-left { flex:1; min-width:0; }
+  .vote-card .game-title { font-family:'Fraunces',serif; font-weight:700; font-size:15px; margin-bottom:3px; }
+  .vote-card .game-meta { font-size:11px; color:var(--text-dim); font-weight:600; }
+  .vote-card .game-quick { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+  .vote-card .game-quick span { font-size:11px; font-weight:600; color:var(--text-dim); }
+  .vote-card-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .vote-card .vote-check {
+    font-size:18px; opacity:0; transition:opacity 0.2s; color:var(--blue);
+  }
+  .vote-card.voted .vote-check { opacity:1; }
+  .vote-card.voted .game-title { color:var(--blue); }
+  .vote-card .info-toggle {
+    background:none; border:none; font-size:11px; color:var(--text-dim);
+    cursor:pointer; padding:2px 4px; transition:transform 0.25s;
+  }
+  .vote-card .info-toggle.open { transform:rotate(90deg); }
+  .vote-card-details {
+    max-height:0; overflow:hidden;
+    transition:max-height 0.35s ease;
+    border-top:0px solid transparent;
+  }
+  .vote-card-details.open {
+    max-height:350px;
+    border-top:1.5px solid var(--border-light);
+  }
+  .vote-card-details-inner {
+    padding:14px 16px;
+    display:grid; grid-template-columns:1fr 1fr; gap:8px 16px;
+  }
+  .vd-item { display:flex; flex-direction:column; gap:1px; }
+  .vd-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); }
+  .vd-value { font-size:13px; font-weight:600; color:var(--text); }
+  .vd-full { grid-column:1/-1; }
+  .vd-reason { grid-column:1/-1; font-size:12px; color:var(--text-mid); font-style:italic; margin-top:2px; }
+  .vd-bgg { grid-column:1/-1; margin-top:4px; }
+  .vd-bgg a {
+    display:inline-flex; align-items:center; gap:4px;
+    background:var(--bga-dim); color:var(--bga);
+    padding:4px 12px; border-radius:6px;
+    font-size:12px; font-weight:700; text-decoration:none; transition:all 0.2s;
+  }
+  .vd-bgg a:hover { background:rgba(232,93,38,0.18); }
+  .vd-by { grid-column:1/-1; font-size:11px; color:var(--amber); font-weight:700; margin-top:2px; }
+
+  .submit-votes-btn {
+    width:100%; background:var(--blue); border:none; border-radius:11px;
+    padding:14px; font-family:'Nunito',sans-serif; font-size:15px; font-weight:700;
+    color:#fff; cursor:pointer; transition:all 0.25s;
+    box-shadow:0 2px 8px rgba(59,111,160,0.2);
+  }
+  .submit-votes-btn:hover { box-shadow:0 4px 20px rgba(59,111,160,0.3); transform:translateY(-1px); }
+  .submit-votes-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .results-table thead th { color:var(--blue); }
+  .vote-count-badge { background:var(--blue-dim); color:var(--blue); }
+  .game-name-cell { font-family:'Fraunces',serif; font-weight:700; font-size:14px; }
+  .vote-bar { height:5px; background:var(--blue-dim); border-radius:3px; margin-top:6px; overflow:hidden; }
+  .vote-bar-fill { height:100%; background:var(--blue); border-radius:3px; transition:width 0.4s ease; }
+
+  /* Expandable details */
+  .result-row { cursor:pointer; }
+  .result-row:hover { background:rgba(59,111,160,0.04); }
+  .expand-icon {
+    display:inline-block; font-size:11px; color:var(--text-dim);
+    transition:transform 0.25s; margin-right:6px;
+  }
+  .expand-icon.open { transform:rotate(90deg); }
+
+  .detail-row td {
+    padding:0 !important;
+    border-bottom:1px solid var(--border-light) !important;
+  }
+  .detail-content {
+    max-height:0; overflow:hidden;
+    transition:max-height 0.35s ease, padding 0.35s ease;
+    padding:0 14px;
+  }
+  .detail-content.open {
+    max-height:300px;
+    padding:14px;
+  }
+  .detail-grid {
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:8px 20px;
+  }
+  .detail-item {
+    display:flex; flex-direction:column; gap:1px;
+  }
+  .detail-label {
+    font-size:10px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  .detail-value {
+    font-size:13px; font-weight:600; color:var(--text);
+  }
+  .detail-reason {
+    grid-column:1/-1;
+    font-size:13px; color:var(--text-mid);
+    font-style:italic;
+    margin-top:4px;
+  }
+  .detail-bgg {
+    grid-column:1/-1; margin-top:4px;
+  }
+  .detail-bgg a {
+    display:inline-flex; align-items:center; gap:4px;
+    background:var(--bga-dim); color:var(--bga);
+    padding:4px 12px; border-radius:6px;
+    font-size:12px; font-weight:700;
+    text-decoration:none; transition:all 0.2s;
+  }
+  .detail-bgg a:hover { background:rgba(232,93,38,0.18); }
+  .detail-by {
+    grid-column:1/-1;
+    font-size:11px; color:var(--amber); font-weight:700; margin-top:2px;
+  }
+
+  .toast { background:var(--blue); }
+
+  .sort-bar { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .sort-chip {
+    background:var(--bg-warm); border:1.5px solid var(--border); border-radius:8px;
+    padding:6px 12px; font-family:'Nunito',sans-serif; font-size:11px; font-weight:700;
+    color:var(--text-dim); cursor:pointer; transition:all 0.2s;
+  }
+  .sort-chip:hover { border-color:var(--blue); color:var(--blue); }
+  .sort-chip.active { border-color:var(--blue); background:var(--blue-dim); color:var(--blue); }
+
+  @media(max-width:500px){
+    .vote-card-details-inner, .detail-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <a href="index.html" class="nav-link"><span class="nav-icon">🎲</span>Umfrage</a>
+  <a href="inventar.html" class="nav-link"><span class="nav-icon">📦</span>Inventar</a>
+  <a href="vorschlaege.html" class="nav-link"><span class="nav-icon">💡</span>Vorschläge</a>
+  <a href="abstimmung.html" class="nav-link active active-blue"><span class="nav-icon">🗳️</span>Abstimmung</a>
+  <a href="impressum.html" class="nav-link"><span class="nav-icon">⚖️</span>Impressum</a>
+</div></nav>
+
+<div class="app">
+  <div class="header fade-in">
+    <div class="tag">🗳️ Abstimmung</div>
+    <h1>Beschaffungs-Abstimmung</h1>
+    <p>Stimme ab, welche vorgeschlagenen Spiele angeschafft werden sollen. Mehrfachauswahl möglich!</p>
+  </div>
+
+  <div class="card fade-in delay-1">
+    <div class="card-title">🧑‍🤝‍🧑 Dein Name</div>
+    <div class="name-section" id="nameSection"></div>
+  </div>
+
+  <div class="card fade-in delay-2">
+    <div class="card-title">🎯 Spiele auswählen</div>
+    <div class="search-row">
+      <input class="search-input" id="voteSearch" placeholder="🔍 Spiel suchen…" oninput="renderVoteGrid()">
+    </div>
+    <div class="sort-bar" id="voteSortBar"></div>
+    <div class="vote-grid" id="voteGrid"><div class="no-results">Lade Vorschläge…</div></div>
+    <button class="submit-votes-btn" id="submitVotesBtn" onclick="submitVotes()" disabled>🗳️ Abstimmen</button>
+  </div>
+
+  <div class="card fade-in delay-3">
+    <div class="card-title">📊 Ergebnisse</div>
+    <div class="search-row">
+      <input class="search-input" id="resultSearch" placeholder="🔍 Ergebnis suchen…" oninput="renderResults()">
+    </div>
+    <div class="sort-bar" id="resultSortBar"></div>
+    <div id="resultsTable"><div class="no-results">Lade Ergebnisse…</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let selectedName=null,selectedGames=new Set(),suggestions=[],allVotes={};
+let voteSortCol='name',voteSortDir=1;
+let resultSortCol='count',resultSortDir=-1;
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function sanitizeKey(s){return s.replace(/[.#$\/\[\]]/g,'_');}
+
+function voteSortBy(col){if(voteSortCol===col)voteSortDir*=-1;else{voteSortCol=col;voteSortDir=1;}renderVoteGrid();}
+function resultSortBy(col){if(resultSortCol===col)resultSortDir*=-1;else{resultSortCol=col;resultSortDir=1;}renderResults();}
+
+function renderSortBar(containerId,cols,currentCol,currentDir,sortFn){
+  document.getElementById(containerId).innerHTML=cols.map(c=>{
+    const active=currentCol===c.col?'active':'';
+    const arrow=currentCol===c.col?(currentDir===1?' ▲':' ▼'):'';
+    return`<button class="sort-chip ${active}" onclick="${sortFn}('${c.col}')">${c.label}${arrow}</button>`;
+  }).join('');
+}
+
+db.ref('vorschlaege').on('value',snap=>{const data=snap.val();suggestions=data?Object.entries(data).map(([id,s])=>({id,...s})):[];renderVoteGrid();renderResults();});
+db.ref('abstimmung').on('value',snap=>{allVotes=snap.val()||{};renderResults();renderVoteGrid();});
+
+function renderNames(){
+  const s=document.getElementById('nameSection');let h='<span class="label">Wer bist du?</span>';
+  h+=DEFAULT_NAMES.map(n=>`<button class="name-chip ${selectedName===n?'selected':''}" onclick="selectName('${n.replace(/'/g,"\\'")}')">${esc(n)}</button>`).join('');
+  s.innerHTML=h;
+}
+function selectName(n){
+  selectedName=n;selectedGames.clear();
+  Object.entries(allVotes).forEach(([gk,voters])=>{
+    if(voters&&Object.values(voters).includes(n)){
+      const sg=suggestions.find(s=>gk===sanitizeKey(s.name));
+      if(sg)selectedGames.add(sg.id);
+    }
+  });
+  renderNames();renderVoteGrid();updateSubmitBtn();
+}
+
+function toggleVoteInfo(idx,e){
+  e.stopPropagation();
+  const el=document.getElementById('vote-detail-'+idx);
+  const icon=document.getElementById('vote-icon-'+idx);
+  if(el){el.classList.toggle('open');icon.classList.toggle('open');}
+}
+
+function renderVoteGrid(){
+  const grid=document.getElementById('voteGrid');
+  const query=(document.getElementById('voteSearch').value||'').toLowerCase().trim();
+  const voteSorts=[{col:'name',label:'Name'},{col:'genre',label:'Genre'},{col:'suggestedBy',label:'Von'},{col:'votes',label:'Stimmen'}];
+  renderSortBar('voteSortBar',voteSorts,voteSortCol,voteSortDir,'voteSortBy');
+
+  if(!suggestions.length){grid.innerHTML='<div class="no-results">Keine Spielvorschläge vorhanden. <a href="vorschlaege.html" style="color:var(--blue);font-weight:700">Jetzt vorschlagen →</a></div>';return;}
+
+  let filtered=suggestions;
+  if(query) filtered=suggestions.filter(s=>
+    (s.name||'').toLowerCase().includes(query)||
+    (s.genre||'').toLowerCase().includes(query)||
+    (s.suggestedBy||'').toLowerCase().includes(query)
+  );
+
+  // Sort
+  filtered=[...filtered].sort((a,b)=>{
+    if(voteSortCol==='votes'){
+      const va=allVotes[sanitizeKey(a.name)]?Object.keys(allVotes[sanitizeKey(a.name)]).length:0;
+      const vb=allVotes[sanitizeKey(b.name)]?Object.keys(allVotes[sanitizeKey(b.name)]).length:0;
+      return (va-vb)*voteSortDir;
+    }
+    let va=(a[voteSortCol]||'').toString().toLowerCase(),vb=(b[voteSortCol]||'').toString().toLowerCase();
+    if(va<vb)return -1*voteSortDir;if(va>vb)return 1*voteSortDir;return 0;
+  });
+
+  if(!filtered.length){grid.innerHTML='<div class="no-results">Keine Treffer</div>';return;}
+
+  grid.innerHTML=filtered.map((s,i)=>{
+    const isVoted=selectedGames.has(s.id);
+    const gk=sanitizeKey(s.name),vc=allVotes[gk]?Object.keys(allVotes[gk]).length:0;
+
+    let quick='';
+    if(s.players)quick+=`<span>👥 ${esc(s.players)}</span>`;
+    if(s.duration)quick+=`<span>⏱ ${esc(s.duration)}</span>`;
+    if(s.genre)quick+=`<span>🏷 ${esc(s.genre)}</span>`;
+    if(vc)quick+=`<span>🗳 ${vc} Stimme${vc>1?'n':''}</span>`;
+
+    let details='';
+    if(s.players)details+=`<div class="vd-item"><span class="vd-label">👥 Spieler</span><span class="vd-value">${esc(s.players)}</span></div>`;
+    if(s.duration)details+=`<div class="vd-item"><span class="vd-label">⏱ Spieldauer</span><span class="vd-value">${esc(s.duration)}</span></div>`;
+    if(s.genre)details+=`<div class="vd-item"><span class="vd-label">🏷 Genre</span><span class="vd-value">${esc(s.genre)}</span></div>`;
+    if(s.price)details+=`<div class="vd-item"><span class="vd-label">💰 Preis</span><span class="vd-value">${esc(s.price)}</span></div>`;
+    if(s.reason)details+=`<div class="vd-reason">"${esc(s.reason)}"</div>`;
+    if(s.bgaLink)details+=`<div class="vd-bgg"><a href="${esc(s.bgaLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🌐 Auf BoardGameGeek ansehen</a></div>`;
+    if(s.suggestedBy)details+=`<div class="vd-by">Vorgeschlagen von ${esc(s.suggestedBy)}</div>`;
+
+    return`<div class="vote-card ${isVoted?'voted':''}" onclick="toggleVote('${s.id}')">
+      <div class="vote-card-header">
+        <div class="vote-card-left">
+          <div class="game-title">${esc(s.name)}</div>
+          ${quick?`<div class="game-quick">${quick}</div>`:''}
+        </div>
+        <div class="vote-card-right">
+          <span class="vote-check">✓</span>
+          <button class="info-toggle" id="vote-icon-${i}" onclick="toggleVoteInfo(${i},event)">▶</button>
+        </div>
+      </div>
+      ${details?`<div class="vote-card-details" id="vote-detail-${i}"><div class="vote-card-details-inner">${details}</div></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function toggleVote(id){
+  if(!selectedName){showToast('Bitte zuerst deinen Namen wählen!');return;}
+  if(selectedGames.has(id))selectedGames.delete(id);else selectedGames.add(id);
+  renderVoteGrid();updateSubmitBtn();
+}
+function updateSubmitBtn(){document.getElementById('submitVotesBtn').disabled=!selectedName;}
+
+async function submitVotes(){
+  if(!selectedName)return;
+  try{
+    const updates={};
+    suggestions.forEach(s=>{
+      const gk=sanitizeKey(s.name),vk=sanitizeKey(selectedName);
+      updates[`abstimmung/${gk}/${vk}`]=selectedGames.has(s.id)?selectedName:null;
+    });
+    await db.ref().update(updates);
+    showToast(`Abstimmung von ${selectedName} gespeichert!`);
+  }catch(e){showToast('Fehler beim Speichern!');}
+}
+
+function toggleDetail(idx){
+  const content=document.getElementById('detail-'+idx);
+  const icon=document.getElementById('icon-'+idx);
+  if(content){
+    content.classList.toggle('open');
+    icon.classList.toggle('open');
+  }
+}
+
+function renderResults(){
+  const container=document.getElementById('resultsTable');
+  const query=(document.getElementById('resultSearch').value||'').toLowerCase().trim();
+  const resSorts=[{col:'name',label:'Name'},{col:'count',label:'Stimmen'},{col:'genre',label:'Genre'},{col:'suggestedBy',label:'Von'}];
+  renderSortBar('resultSortBar',resSorts,resultSortCol,resultSortDir,'resultSortBy');
+
+  if(!suggestions.length){container.innerHTML='<div class="no-results">Keine Spiele zur Abstimmung</div>';return;}
+
+  let results=suggestions.map(s=>{
+    const gk=sanitizeKey(s.name);
+    const voters=allVotes[gk]?Object.values(allVotes[gk]):[];
+    return{
+      name:s.name, bgaLink:s.bgaLink, voters, count:voters.length,
+      players:s.players, duration:s.duration, genre:s.genre,
+      price:s.price, reason:s.reason, suggestedBy:s.suggestedBy
+    };
+  });
+
+  // Filter
+  if(query) results=results.filter(r=>
+    (r.name||'').toLowerCase().includes(query)||
+    (r.genre||'').toLowerCase().includes(query)||
+    (r.suggestedBy||'').toLowerCase().includes(query)||
+    r.voters.some(v=>v.toLowerCase().includes(query))
+  );
+
+  // Sort
+  results.sort((a,b)=>{
+    if(resultSortCol==='count') return (a.count-b.count)*resultSortDir;
+    let va=(a[resultSortCol]||'').toString().toLowerCase(),vb=(b[resultSortCol]||'').toString().toLowerCase();
+    if(va<vb)return -1*resultSortDir;if(va>vb)return 1*resultSortDir;return 0;
+  });
+
+  const maxV=Math.max(...results.map(r=>r.count),1);
+
+  if(!results.length||results.every(r=>r.count===0)){
+    container.innerHTML=`<div class="no-results">${query?'Keine Treffer':'Noch keine Stimmen abgegeben'}</div>`;
+    return;
+  }
+
+  let h=`<table class="results-table"><thead><tr>
+    <th>Spiel</th>
+    <th style="text-align:center">Stimmen</th>
+    <th>Wer hat gestimmt</th>
+  </tr></thead><tbody>`;
+
+  let idx=0;
+  results.forEach(r=>{
+    if(r.count===0)return;
+    const pct=(r.count/maxV)*100;
+    const vt=r.voters.map(v=>`<span class="voter-tag">${esc(v)}</span>`).join('');
+    const hasDetails=r.players||r.duration||r.genre||r.price||r.reason||r.bgaLink||r.suggestedBy;
+    const curIdx=idx++;
+
+    // Main row
+    h+=`<tr class="result-row" onclick="toggleDetail(${curIdx})">
+      <td>
+        <span class="expand-icon" id="icon-${curIdx}">▶</span>
+        <span class="game-name-cell">${esc(r.name)}</span>
+        <div class="vote-bar"><div class="vote-bar-fill" style="width:${pct}%"></div></div>
+      </td>
+      <td style="text-align:center"><span class="vote-count-badge">${r.count}</span></td>
+      <td>${vt}</td>
+    </tr>`;
+
+    // Expandable detail row
+    if(hasDetails){
+      h+=`<tr class="detail-row"><td colspan="3">
+        <div class="detail-content" id="detail-${curIdx}">
+          <div class="detail-grid">`;
+
+      if(r.players) h+=`<div class="detail-item"><span class="detail-label">👥 Spieler</span><span class="detail-value">${esc(r.players)}</span></div>`;
+      if(r.duration) h+=`<div class="detail-item"><span class="detail-label">⏱ Spieldauer</span><span class="detail-value">${esc(r.duration)}</span></div>`;
+      if(r.genre) h+=`<div class="detail-item"><span class="detail-label">🏷 Genre</span><span class="detail-value">${esc(r.genre)}</span></div>`;
+      if(r.price) h+=`<div class="detail-item"><span class="detail-label">💰 Preis</span><span class="detail-value">${esc(r.price)}</span></div>`;
+      if(r.reason) h+=`<div class="detail-reason">"${esc(r.reason)}"</div>`;
+      if(r.bgaLink) h+=`<div class="detail-bgg"><a href="${esc(r.bgaLink)}" target="_blank" rel="noopener">🌐 Auf BoardGameGeek ansehen</a></div>`;
+      if(r.suggestedBy) h+=`<div class="detail-by">Vorgeschlagen von ${esc(r.suggestedBy)}</div>`;
+
+      h+=`</div></div></td></tr>`;
+    }
+  });
+
+  h+='</tbody></table>';
+  container.innerHTML=h;
+}
+
+onNamesReady(()=>renderNames());
+</script>
+</body>
+</html>

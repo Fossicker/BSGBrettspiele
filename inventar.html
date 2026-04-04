@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎲 Brettspiel-Abend · Spiele-Inventar</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .header .tag { color:var(--teal); background:var(--teal-dim); border-color:rgba(42,125,110,0.15); }
+  .game-name { font-weight:700; color:var(--text); }
+  .add-game-btn {
+    grid-column:1/-1; background:var(--teal); border:none; border-radius:10px;
+    padding:12px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700;
+    color:#fff; cursor:pointer; transition:all 0.2s;
+    box-shadow:0 2px 8px rgba(42,125,110,0.2);
+  }
+  .add-game-btn:hover { box-shadow:0 4px 20px rgba(42,125,110,0.3); transform:translateY(-1px); }
+  .inv-table thead th { color:var(--teal); }
+  .toast { background:var(--teal); }
+  .origin-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; }
+  .origin-badge.spende { background:rgba(212,148,10,0.12); color:#b8860b; }
+  .origin-badge.bsg { background:rgba(42,125,110,0.12); color:var(--teal); }
+  select.form-input {
+    appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239c8b78' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
+    padding-right:32px; cursor:pointer;
+  }
+  .dt-row:hover { background:rgba(42,125,110,0.04); }
+  .detail-row td { border-bottom:1px solid var(--border-light) !important; }
+  .detail-content { max-height:0; overflow:hidden; transition:max-height 0.35s ease, padding 0.35s ease; padding:0 14px; }
+  .detail-content.open { max-height:300px; padding:14px; }
+  .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; }
+  .detail-full { grid-column:1/-1; }
+  .expand-icon { display:inline-block; font-size:11px; color:var(--text-dim); transition:transform 0.25s; margin-right:4px; }
+  .expand-icon.open { transform:rotate(90deg); }
+
+  .game-cards { display:flex; flex-direction:column; gap:10px; }
+  .game-card { background:var(--bg-warm); border:1.5px solid var(--border); border-radius:12px; overflow:hidden; transition:border-color 0.2s; }
+  .game-card:hover { border-color:rgba(42,125,110,0.3); }
+  .game-card-header { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; cursor:pointer; gap:8px; }
+  .game-card-left { flex:1; min-width:0; }
+  .game-card-name { font-family:'Fraunces',serif; font-weight:700; font-size:15px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .game-card-quick { display:flex; gap:8px; margin-top:4px; flex-wrap:wrap; }
+  .game-card-quick span { font-size:11px; font-weight:600; color:var(--text-dim); }
+  .game-card-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .game-card-details { max-height:0; overflow:hidden; transition:max-height 0.35s ease; border-top:0px solid transparent; }
+  .game-card-details.open { max-height:400px; border-top:1.5px solid var(--border-light); }
+  .game-card-details-inner { padding:14px 16px; display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; }
+  .detail-item { display:flex; flex-direction:column; gap:1px; }
+  .detail-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); }
+  .detail-value { font-size:13px; font-weight:600; color:var(--text); }
+  .detail-notes { grid-column:1/-1; font-size:12px; color:var(--text-mid); font-style:italic; margin-top:2px; }
+  .detail-bgg { grid-column:1/-1; margin-top:4px; }
+  .detail-bgg a { display:inline-flex; align-items:center; gap:4px; background:var(--bga-dim); color:var(--bga); padding:4px 12px; border-radius:6px; font-size:12px; font-weight:700; text-decoration:none; transition:all 0.2s; }
+  .detail-bgg a:hover { background:rgba(232,93,38,0.18); }
+  .detail-actions { grid-column:1/-1; display:flex; gap:8px; margin-top:6px; }
+  .detail-actions button { border-radius:8px; padding:6px 14px; font-family:'Nunito',sans-serif; font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .btn-edit { background:var(--blue-dim); border:1.5px solid rgba(59,111,160,0.2); color:var(--blue); }
+  .btn-edit:hover { background:rgba(59,111,160,0.15); }
+  .btn-del { background:var(--danger-dim); border:1.5px solid rgba(194,82,42,0.2); color:var(--danger); }
+  .btn-del:hover { background:rgba(194,82,42,0.15); }
+
+  .desktop-table { display:none; }
+  .mobile-cards { display:block; }
+  @media(min-width:700px) { .desktop-table{display:block;} .mobile-cards{display:none;} }
+
+  .sort-bar { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .sort-chip { background:var(--bg-warm); border:1.5px solid var(--border); border-radius:8px; padding:6px 12px; font-family:'Nunito',sans-serif; font-size:11px; font-weight:700; color:var(--text-dim); cursor:pointer; transition:all 0.2s; }
+  .sort-chip:hover { border-color:var(--teal); color:var(--teal); }
+  .sort-chip.active { border-color:var(--teal); background:var(--teal-dim); color:var(--teal); }
+  @media(min-width:700px) { .sort-bar{display:none;} }
+
+  /* ═══ EDIT MODAL ═══ */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:16px; padding:28px; width:100%; max-width:480px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.15); max-height:90vh; overflow-y:auto;
+  }
+  .modal h2 { font-family:'Fraunces',serif; font-size:20px; font-weight:700; margin-bottom:16px; }
+  .modal .form-stack { display:flex; flex-direction:column; gap:10px; }
+  .modal .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .modal-actions { display:flex; gap:10px; margin-top:16px; }
+  .modal-actions button { flex:1; padding:12px; border-radius:10px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .modal-save { background:var(--teal); border:none; color:#fff; }
+  .modal-save:hover { box-shadow:0 4px 16px rgba(42,125,110,0.3); }
+  .modal-cancel { background:var(--bg-warm); border:1.5px solid var(--border); color:var(--text-mid); }
+  .modal-cancel:hover { border-color:var(--text-dim); }
+  @media(max-width:500px) { .modal .form-row{grid-template-columns:1fr;} .game-card-details-inner{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <a href="index.html" class="nav-link"><span class="nav-icon">🎲</span>Umfrage</a>
+  <a href="inventar.html" class="nav-link active active-teal"><span class="nav-icon">📦</span>Inventar</a>
+  <a href="vorschlaege.html" class="nav-link"><span class="nav-icon">💡</span>Vorschläge</a>
+  <a href="abstimmung.html" class="nav-link"><span class="nav-icon">🗳️</span>Abstimmung</a>
+  <a href="impressum.html" class="nav-link"><span class="nav-icon">⚖️</span>Impressum</a>
+</div></nav>
+
+<div class="app">
+  <div class="header fade-in">
+    <div class="tag">📦 Inventar</div>
+    <h1>Spiele-Inventar</h1>
+    <p>Alle Brettspiele auf einen Blick. Suchen, durchstöbern und neue hinzufügen.</p>
+  </div>
+
+  <div class="card fade-in delay-1">
+    <div class="card-title">➕ Neues Spiel hinzufügen</div>
+    <div class="form-grid">
+      <input class="form-input" id="gameName" placeholder="Spielname *" maxlength="60">
+      <input class="form-input" id="gameMinPlayers" type="number" placeholder="Min. Spieler" min="1" max="99">
+      <input class="form-input" id="gameMaxPlayers" type="number" placeholder="Max. Spieler" min="1" max="99">
+      <input class="form-input" id="gameDuration" placeholder="Spieldauer (z.B. 30–60 Min.)" maxlength="30">
+      <input class="form-input" id="gameGenre" placeholder="Genre (z.B. Strategie)" maxlength="30">
+      <select class="form-input" id="gameOrigin">
+        <option value="" disabled selected>Ursprung wählen…</option>
+        <option value="Spende">Spende</option>
+        <option value="BSG">BSG</option>
+      </select>
+      <input class="form-input" id="gameNotes" placeholder="Anmerkungen (optional)" maxlength="80">
+      <input class="form-input full bga-input" id="gameBga" placeholder="🌐 BoardGameGeek Link (optional)" maxlength="200">
+      <button class="add-game-btn" onclick="addGame()">🎲 Spiel hinzufügen</button>
+    </div>
+  </div>
+
+  <div class="card fade-in delay-2">
+    <div class="search-row">
+      <input class="search-input" id="searchInput" placeholder="🔍 Spiel suchen…" oninput="renderGames()">
+      <span class="game-count" id="gameCount"></span>
+    </div>
+    <div class="sort-bar" id="sortBar"></div>
+    <div class="desktop-table" id="desktopTable"></div>
+    <div class="mobile-cards" id="mobileCards"></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2>✏️ Spiel bearbeiten</h2>
+    <div class="form-stack">
+      <input class="form-input" id="editName" placeholder="Spielname *" maxlength="60">
+      <div class="form-row">
+        <input class="form-input" id="editMinPlayers" type="number" placeholder="Min. Spieler" min="1" max="99">
+        <input class="form-input" id="editMaxPlayers" type="number" placeholder="Max. Spieler" min="1" max="99">
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="editDuration" placeholder="Spieldauer" maxlength="30">
+        <input class="form-input" id="editGenre" placeholder="Genre" maxlength="30">
+      </div>
+      <select class="form-input" id="editOrigin">
+        <option value="" disabled>Ursprung wählen…</option>
+        <option value="Spende">Spende</option>
+        <option value="BSG">BSG</option>
+      </select>
+      <input class="form-input" id="editNotes" placeholder="Anmerkungen (optional)" maxlength="80">
+      <input class="form-input bga-input" id="editBga" placeholder="🌐 BoardGameGeek Link (optional)" maxlength="200">
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeEditModal()">Abbrechen</button>
+        <button class="modal-save" onclick="saveEdit()">💾 Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let games=[],sortCol='name',sortDir=1,editingId=null;
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+db.ref('inventar').on('value',snap=>{const data=snap.val();games=data?Object.entries(data).map(([id,g])=>({id,...g})):[];renderGames();});
+
+function getFiltered(){
+  const query=document.getElementById('searchInput').value.toLowerCase().trim();
+  let filtered=games;
+  if(query) filtered=games.filter(g=>(g.name||'').toLowerCase().includes(query)||(g.genre||'').toLowerCase().includes(query)||(g.notes||'').toLowerCase().includes(query));
+  filtered.sort((a,b)=>{let va=(a[sortCol]||'').toString().toLowerCase(),vb=(b[sortCol]||'').toString().toLowerCase();if(sortCol==='minPlayers'||sortCol==='maxPlayers'){va=parseInt(va)||0;vb=parseInt(vb)||0;}return va<vb?-1*sortDir:va>vb?1*sortDir:0;});
+  return{filtered,query,total:games.length};
+}
+function toggleCard(idx){const el=document.getElementById('card-detail-'+idx),icon=document.getElementById('card-icon-'+idx);if(el){el.classList.toggle('open');icon.classList.toggle('open');}}
+function toggleDesktopRow(idx){const el=document.getElementById('dt-detail-'+idx),icon=document.getElementById('dt-icon-'+idx);if(el){el.classList.toggle('open');icon.classList.toggle('open');}}
+
+function renderGames(){
+  const{filtered,query,total}=getFiltered();
+  document.getElementById('gameCount').textContent=`${filtered.length} von ${total} Spielen`;
+  renderDesktopTable(filtered,query);renderMobileCards(filtered,query);renderSortBar();
+}
+
+function renderSortBar(){
+  const sorts=[{col:'name',label:'Name'},{col:'minPlayers',label:'Spieler'},{col:'duration',label:'Dauer'},{col:'genre',label:'Genre'},{col:'origin',label:'Ursprung'}];
+  document.getElementById('sortBar').innerHTML=sorts.map(s=>{const active=sortCol===s.col?'active':'';const arrow=sortCol===s.col?(sortDir===1?' ▲':' ▼'):'';return`<button class="sort-chip ${active}" onclick="sortBy('${s.col}')">${s.label}${arrow}</button>`;}).join('');
+}
+
+function renderDesktopTable(filtered,query){
+  const container=document.getElementById('desktopTable');
+  if(!filtered.length){container.innerHTML=`<div class="no-results">${games.length?'Keine Treffer für "'+esc(query)+'"':'Noch keine Spiele im Inventar'}</div>`;return;}
+  const arrow=col=>sortCol===col?`<span class="sort-arrow">${sortDir===1?'▲':'▼'}</span>`:'';
+  let h=`<table class="inv-table"><thead><tr>
+    <th onclick="sortBy('name')">Spiel${arrow('name')}</th>
+    <th onclick="sortBy('minPlayers')">Spieler${arrow('minPlayers')}</th>
+    <th onclick="sortBy('duration')">Dauer${arrow('duration')}</th>
+    <th onclick="sortBy('genre')">Genre${arrow('genre')}</th>
+    <th onclick="sortBy('origin')">Ursprung${arrow('origin')}</th>
+    <th></th>
+  </tr></thead><tbody>`;
+  filtered.forEach((g,i)=>{
+    const players=(g.minPlayers&&g.maxPlayers)?`<span class="player-badge">${g.minPlayers}–${g.maxPlayers}</span>`:(g.minPlayers?`<span class="player-badge">${g.minPlayers}+</span>`:'–');
+    const originCell=g.origin?`<span class="origin-badge ${g.origin.toLowerCase()}">${esc(g.origin)}</span>`:'<span style="color:var(--text-dim)">–</span>';
+    h+=`<tr class="dt-row" onclick="toggleDesktopRow(${i})" style="cursor:pointer">
+      <td class="game-name"><span class="expand-icon" id="dt-icon-${i}">▶</span> ${esc(g.name)}</td>
+      <td>${players}</td><td>${esc(g.duration||'–')}</td><td>${esc(g.genre||'–')}</td><td>${originCell}</td>
+      <td style="white-space:nowrap">
+        <button class="delete-btn" onclick="event.stopPropagation();openEditModal('${g.id}')" title="Bearbeiten">✏️</button>
+        <button class="delete-btn" onclick="event.stopPropagation();deleteGame('${g.id}')" title="Löschen">✕</button>
+      </td>
+    </tr>`;
+    h+=`<tr class="detail-row"><td colspan="6" style="padding:0!important"><div class="detail-content" id="dt-detail-${i}"><div class="detail-grid">`;
+    if(g.notes) h+=`<div class="detail-item detail-full"><span class="detail-label">📝 Anmerkungen</span><span class="detail-value">${esc(g.notes)}</span></div>`;
+    if(g.bgaLink) h+=`<div class="detail-bgg"><a href="${esc(g.bgaLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🌐 Auf BoardGameGeek ansehen</a></div>`;
+    h+=`</div></div></td></tr>`;
+  });
+  h+='</tbody></table>';container.innerHTML=h;
+}
+
+function renderMobileCards(filtered,query){
+  const container=document.getElementById('mobileCards');
+  if(!filtered.length){container.innerHTML=`<div class="no-results">${games.length?'Keine Treffer für "'+esc(query)+'"':'Noch keine Spiele im Inventar'}</div>`;return;}
+  let h='<div class="game-cards">';
+  filtered.forEach((g,i)=>{
+    const players=(g.minPlayers&&g.maxPlayers)?`${g.minPlayers}–${g.maxPlayers} Spieler`:(g.minPlayers?`${g.minPlayers}+ Spieler`:'');
+    let quick='';
+    if(players)quick+=`<span>👥 ${players}</span>`;if(g.duration)quick+=`<span>⏱ ${esc(g.duration)}</span>`;if(g.genre)quick+=`<span>🏷 ${esc(g.genre)}</span>`;if(g.origin)quick+=`<span>📌 ${esc(g.origin)}</span>`;
+    h+=`<div class="game-card"><div class="game-card-header" onclick="toggleCard(${i})"><div class="game-card-left"><div class="game-card-name">${esc(g.name)}</div>${quick?`<div class="game-card-quick">${quick}</div>`:''}</div><div class="game-card-right"><span class="expand-icon" id="card-icon-${i}">▶</span></div></div>
+    <div class="game-card-details" id="card-detail-${i}"><div class="game-card-details-inner">`;
+    if(players)h+=`<div class="detail-item"><span class="detail-label">👥 Spieler</span><span class="detail-value">${players}</span></div>`;
+    if(g.duration)h+=`<div class="detail-item"><span class="detail-label">⏱ Spieldauer</span><span class="detail-value">${esc(g.duration)}</span></div>`;
+    if(g.genre)h+=`<div class="detail-item"><span class="detail-label">🏷 Genre</span><span class="detail-value">${esc(g.genre)}</span></div>`;
+    if(g.origin)h+=`<div class="detail-item"><span class="detail-label">📌 Ursprung</span><span class="detail-value">${esc(g.origin)}</span></div>`;
+    if(g.notes)h+=`<div class="detail-notes">${esc(g.notes)}</div>`;
+    if(g.bgaLink)h+=`<div class="detail-bgg"><a href="${esc(g.bgaLink)}" target="_blank" rel="noopener">🌐 Auf BoardGameGeek ansehen</a></div>`;
+    h+=`<div class="detail-actions"><button class="btn-edit" onclick="openEditModal('${g.id}')">✏️ Bearbeiten</button><button class="btn-del" onclick="deleteGame('${g.id}')">🗑 Löschen</button></div>`;
+    h+=`</div></div></div>`;
+  });
+  h+='</div>';container.innerHTML=h;
+}
+
+function sortBy(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}renderGames();}
+
+// ═══ ADD ═══
+async function addGame(){
+  const name=document.getElementById('gameName').value.trim();if(!name){showToast('Bitte Spielname eingeben!');return;}
+  const game={name,minPlayers:parseInt(document.getElementById('gameMinPlayers').value)||null,maxPlayers:parseInt(document.getElementById('gameMaxPlayers').value)||null,duration:document.getElementById('gameDuration').value.trim()||null,genre:document.getElementById('gameGenre').value.trim()||null,origin:document.getElementById('gameOrigin').value||null,notes:document.getElementById('gameNotes').value.trim()||null,bgaLink:document.getElementById('gameBga').value.trim()||null,addedAt:new Date().toISOString()};
+  try{await db.ref('inventar').push(game);showToast(`"${name}" hinzugefügt!`);['gameName','gameMinPlayers','gameMaxPlayers','gameDuration','gameGenre','gameNotes','gameBga'].forEach(id=>document.getElementById(id).value='');document.getElementById('gameOrigin').selectedIndex=0;}catch(e){showToast('Fehler beim Speichern!');}
+}
+
+// ═══ EDIT ═══
+function openEditModal(id){
+  const g=games.find(x=>x.id===id);if(!g)return;
+  editingId=id;
+  document.getElementById('editName').value=g.name||'';
+  document.getElementById('editMinPlayers').value=g.minPlayers||'';
+  document.getElementById('editMaxPlayers').value=g.maxPlayers||'';
+  document.getElementById('editDuration').value=g.duration||'';
+  document.getElementById('editGenre').value=g.genre||'';
+  document.getElementById('editOrigin').value=g.origin||'';
+  document.getElementById('editNotes').value=g.notes||'';
+  document.getElementById('editBga').value=g.bgaLink||'';
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEditModal(){document.getElementById('editModal').classList.remove('open');editingId=null;}
+async function saveEdit(){
+  if(!editingId)return;
+  const name=document.getElementById('editName').value.trim();if(!name){showToast('Spielname darf nicht leer sein!');return;}
+  const updates={name,minPlayers:parseInt(document.getElementById('editMinPlayers').value)||null,maxPlayers:parseInt(document.getElementById('editMaxPlayers').value)||null,duration:document.getElementById('editDuration').value.trim()||null,genre:document.getElementById('editGenre').value.trim()||null,origin:document.getElementById('editOrigin').value||null,notes:document.getElementById('editNotes').value.trim()||null,bgaLink:document.getElementById('editBga').value.trim()||null};
+  try{await db.ref('inventar/'+editingId).update(updates);showToast(`"${name}" gespeichert!`);closeEditModal();}catch(e){showToast('Fehler beim Speichern!');}
+}
+
+// Close modal on backdrop click
+document.getElementById('editModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeEditModal();});
+
+// ═══ DELETE ═══
+async function deleteGame(id){if(!confirm('Spiel wirklich löschen?'))return;try{await db.ref('inventar/'+id).remove();showToast('Spiel entfernt');}catch(e){showToast('Fehler!');}}
+</script>
+</body>
+</html>
