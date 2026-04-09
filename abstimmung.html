@@ -8,16 +8,6 @@
 <style>
   .header .tag { color:var(--blue); background:var(--blue-dim); border-color:rgba(59,111,160,0.15); }
 
-  .name-section { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-  .name-section .label { font-size:13px; color:var(--text-dim); font-weight:600; margin-right:4px; }
-  .name-chip {
-    background:var(--bg-warm); border:1.5px solid var(--border); border-radius:9px;
-    padding:8px 14px; color:var(--text); font-family:'Nunito',sans-serif;
-    font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;
-  }
-  .name-chip:hover { border-color:var(--blue); background:var(--blue-dim); }
-  .name-chip.selected { border-color:var(--blue); background:var(--blue-dim); color:var(--blue); box-shadow:0 0 0 3px rgba(59,111,160,0.12); }
-
   .vote-grid { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
   .vote-card {
     background:var(--bg-warm); border:1.5px solid var(--border); border-radius:12px;
@@ -181,7 +171,8 @@
 
   <div class="card fade-in delay-1">
     <div class="card-title">🧑‍🤝‍🧑 Dein Name</div>
-    <div class="name-section" id="nameSection"></div>
+    <input class="search-input" id="nameSearch" placeholder="🔍 Name suchen…" oninput="renderNames()" style="margin-bottom:12px;">
+    <div class="name-grid" id="nameGrid"></div>
   </div>
 
   <div class="card fade-in delay-2">
@@ -232,9 +223,13 @@ db.ref('vorschlaege').on('value',snap=>{const data=snap.val();suggestions=data?O
 db.ref('abstimmung').on('value',snap=>{allVotes=snap.val()||{};renderResults();renderVoteGrid();});
 
 function renderNames(){
-  const s=document.getElementById('nameSection');let h='<span class="label">Wer bist du?</span>';
-  h+=DEFAULT_NAMES.map(n=>`<button class="name-chip ${selectedName===n?'selected':''}" onclick="selectName('${n.replace(/'/g,"\\'")}')">${esc(n)}</button>`).join('');
-  s.innerHTML=h;
+  const searchEl=document.getElementById('nameSearch');
+  const query=searchEl?searchEl.value.toLowerCase().trim():'';
+  let filtered=DEFAULT_NAMES;
+  if(query) filtered=DEFAULT_NAMES.filter(n=>n.toLowerCase().includes(query));
+  document.getElementById('nameGrid').innerHTML=filtered.length
+    ?filtered.map(n=>`<button class="name-btn ${selectedName===n?'selected':''}" onclick="selectName('${n.replace(/'/g,"\\'")}')">${esc(n)}</button>`).join('')
+    :'<div class="no-results" style="padding:12px">Kein Name gefunden</div>';
 }
 function selectName(n){
   selectedName=n;selectedGames.clear();
@@ -244,6 +239,8 @@ function selectName(n){
       if(sg)selectedGames.add(sg.id);
     }
   });
+  const s=document.getElementById('nameSearch');
+  if(s)s.value='';
   renderNames();renderVoteGrid();updateSubmitBtn();
 }
 

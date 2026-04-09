@@ -142,7 +142,7 @@
     <div class="tag">🎲 Wöchentliche Umfrage</div>
     <h1 id="headline">Wann hast du am Mittwoch Zeit?</h1>
     <p>Wähle deinen Namen und deine Verfügbarkeit für den nächsten Brettspiel-Abend.</p>
-    <div class="reset-info">Wird automatisch jeden Freitag zurückgesetzt</div>
+    <div class="reset-info">Wird automatisch jeden Donnerstag zurückgesetzt</div>
   </div>
 
   <div class="status-bar fade-in">
@@ -231,17 +231,15 @@ const OPTIONS=[
 ];
 let selectedName=null,selectedOption=null,votes=[];
 
-// Nächsten Freitag als Key: Sa-Fr gehören zusammen, am neuen Sa startet neue Woche
+// Aktuellen Donnerstag als Key: Do-Mi gehoeren zusammen, am neuen Do startet die neue Woche
 function getResetWeekId(){
   const now=new Date();
-  const day=now.getDay(); // 0=So,1=Mo,...,5=Fr,6=Sa
-  // Tage bis nächsten Freitag: Fr(5)=0, Sa(6)=6, So(0)=5, Mo(1)=4, Di(2)=3, Mi(3)=2, Do(4)=1
-  let daysToFri=(5-day+7)%7;
-  if(daysToFri===0) daysToFri=0; // Freitag selbst gehört noch zur aktuellen Woche
-  const nextFri=new Date(now);
-  nextFri.setDate(now.getDate()+daysToFri);
-  nextFri.setHours(0,0,0,0);
-  return nextFri.toISOString().slice(0,10);
+  const day=now.getDay(); // 0=So,1=Mo,...,4=Do
+  const daysSinceThu=(day-4+7)%7;
+  const currentThu=new Date(now);
+  currentThu.setDate(now.getDate()-daysSinceThu);
+  currentThu.setHours(0,0,0,0);
+  return `${currentThu.getFullYear()}-${String(currentThu.getMonth()+1).padStart(2,'0')}-${String(currentThu.getDate()).padStart(2,'0')}`;
 }
 function getDbRef(){return db.ref('umfrage/'+getResetWeekId());}
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
