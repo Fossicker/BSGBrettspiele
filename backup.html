@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔒 Backup · Brettspiel-Abend</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .header .tag { color:var(--wood); background:var(--wood-dim); border-color:rgba(139,94,52,0.15); }
+
+  .backup-btn {
+    width:100%; border:none; border-radius:11px;
+    padding:16px; font-family:'Nunito',sans-serif; font-size:16px; font-weight:700;
+    color:#fff; cursor:pointer; transition:all 0.25s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .backup-btn:hover { transform:translateY(-1px); }
+  .backup-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; box-shadow:none; }
+  .backup-btn.export { background:var(--teal); box-shadow:0 2px 8px rgba(42,125,110,0.2); }
+  .backup-btn.export:hover { box-shadow:0 4px 20px rgba(42,125,110,0.3); }
+  .backup-btn.import { background:var(--amber); box-shadow:0 2px 8px rgba(212,148,10,0.2); margin-top:10px; }
+  .backup-btn.import:hover { box-shadow:0 4px 20px rgba(212,148,10,0.3); }
+  .backup-btn.danger { background:var(--danger); box-shadow:0 2px 8px rgba(194,82,42,0.2); margin-top:10px; }
+
+  .backup-info {
+    background:var(--bg-warm); border:1.5px solid var(--border);
+    border-radius:10px; padding:14px 16px; margin-top:16px;
+    font-size:13px; color:var(--text-mid); line-height:1.6;
+  }
+  .backup-info strong { color:var(--text); }
+
+  .stats-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+    gap:10px; margin-bottom:20px;
+  }
+  .stat-card {
+    background:var(--bg-warm); border:1.5px solid var(--border);
+    border-radius:10px; padding:14px; text-align:center;
+  }
+  .stat-value { font-family:'Fraunces',serif; font-size:24px; font-weight:900; color:var(--wood); }
+  .stat-label { font-size:11px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+
+  .status-msg { text-align:center; padding:16px; font-size:14px; font-weight:600; border-radius:10px; margin-top:16px; }
+  .status-msg.success { background:var(--teal-dim); color:var(--teal); }
+  .status-msg.error { background:var(--danger-dim); color:var(--danger); }
+
+  .upload-zone {
+    border:2px dashed var(--border); border-radius:14px; padding:30px 20px;
+    text-align:center; cursor:pointer; transition:all 0.3s; background:var(--bg-warm);
+    margin-top:16px;
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color:var(--amber); background:var(--amber-dim); }
+  .upload-zone .icon { font-size:32px; margin-bottom:8px; }
+  .upload-zone p { font-size:14px; color:var(--text-mid); font-weight:500; }
+  .upload-zone input { display:none; }
+
+  .toast { background:var(--wood); }
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <a href="index.html" class="nav-link"><span class="nav-icon">🎲</span>Umfrage</a>
+  <a href="inventar.html" class="nav-link"><span class="nav-icon">📦</span>Inventar</a>
+  <a href="vorschlaege.html" class="nav-link"><span class="nav-icon">💡</span>Vorschläge</a>
+  <a href="abstimmung.html" class="nav-link"><span class="nav-icon">🗳️</span>Abstimmung</a>
+  <a href="impressum.html" class="nav-link"><span class="nav-icon">⚖️</span>Impressum</a>
+</div></nav>
+
+<div class="app">
+  <div class="header fade-in">
+    <div class="tag">🔒 Datensicherung</div>
+    <h1>Backup & Restore</h1>
+    <p>Exportiere die gesamte Datenbank als JSON-Datei oder stelle einen früheren Stand wieder her.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid fade-in delay-1" id="statsGrid">
+    <div class="stat-card"><div class="stat-value" id="statTeilnehmer">–</div><div class="stat-label">Teilnehmer</div></div>
+    <div class="stat-card"><div class="stat-value" id="statInventar">–</div><div class="stat-label">Spiele</div></div>
+    <div class="stat-card"><div class="stat-value" id="statVorschlaege">–</div><div class="stat-label">Vorschläge</div></div>
+    <div class="stat-card"><div class="stat-value" id="statAbstimmung">–</div><div class="stat-label">Abstimmungen</div></div>
+  </div>
+
+  <!-- Export -->
+  <div class="card fade-in delay-2">
+    <div class="card-title">📥 Backup erstellen</div>
+    <button class="backup-btn export" onclick="exportBackup()">
+      📥 Komplettes Backup herunterladen
+    </button>
+    <div class="backup-info">
+      <strong>Was wird gesichert?</strong><br>
+      Alle Daten: Teilnehmer, Spiele-Inventar, Vorschläge, Abstimmungen und Umfragedaten.
+      Die Datei wird als <strong>.json</strong> mit Datum im Dateinamen heruntergeladen.
+    </div>
+    <div id="exportStatus"></div>
+  </div>
+
+  <!-- Import -->
+  <div class="card fade-in delay-3">
+    <div class="card-title">📤 Backup wiederherstellen</div>
+    <div class="backup-info" style="margin-top:0;margin-bottom:16px;background:rgba(194,82,42,0.06);border-color:rgba(194,82,42,0.15);">
+      <strong>⚠️ Achtung:</strong> Das Wiederherstellen überschreibt <strong>alle</strong> aktuellen Daten mit dem Inhalt der Backup-Datei. Dieser Vorgang kann nicht rückgängig gemacht werden.
+    </div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📄</div>
+      <p>Backup-Datei (.json) hierher ziehen oder klicken</p>
+      <input type="file" id="fileInput" accept=".json">
+    </div>
+    <div id="importPreview"></div>
+    <div id="importStatus"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// Stats
+function loadStats(){
+  db.ref('teilnehmer').once('value',s=>{
+    const d=s.val();
+    document.getElementById('statTeilnehmer').textContent=d?Object.keys(d).length:0;
+  });
+  db.ref('inventar').once('value',s=>{
+    const d=s.val();
+    document.getElementById('statInventar').textContent=d?Object.keys(d).length:0;
+  });
+  db.ref('vorschlaege').once('value',s=>{
+    const d=s.val();
+    document.getElementById('statVorschlaege').textContent=d?Object.keys(d).length:0;
+  });
+  db.ref('abstimmung').once('value',s=>{
+    const d=s.val();
+    document.getElementById('statAbstimmung').textContent=d?Object.keys(d).length:0;
+  });
+}
+loadStats();
+
+// ═══ EXPORT ═══
+async function exportBackup(){
+  const status=document.getElementById('exportStatus');
+  status.innerHTML='<div class="status-msg" style="background:var(--wood-dim);color:var(--wood)">⏳ Lade Daten…</div>';
+
+  try{
+    const snap=await db.ref('/').once('value');
+    const data=snap.val()||{};
+
+    // Nur relevante Pfade exportieren
+    const backup={
+      _meta:{
+        exportDate:new Date().toISOString(),
+        version:'1.0'
+      },
+      teilnehmer:data.teilnehmer||null,
+      inventar:data.inventar||null,
+      vorschlaege:data.vorschlaege||null,
+      abstimmung:data.abstimmung||null,
+      umfrage:data.umfrage||null
+    };
+
+    const json=JSON.stringify(backup,null,2);
+    const blob=new Blob([json],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+
+    const now=new Date();
+    const datum=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const zeit=`${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`brettspiel-backup-${datum}-${zeit}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const size=(json.length/1024).toFixed(1);
+    status.innerHTML=`<div class="status-msg success">✅ Backup heruntergeladen (${size} KB)</div>`;
+    showToast('Backup erstellt!');
+  }catch(e){
+    console.error(e);
+    status.innerHTML='<div class="status-msg error">❌ Fehler beim Erstellen des Backups</div>';
+  }
+}
+
+// ═══ IMPORT ═══
+let importData=null;
+
+const zone=document.getElementById('uploadZone');
+zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');});
+zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));
+zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0]);});
+document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files.length)handleFile(e.target.files[0]);});
+
+function handleFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      importData=JSON.parse(e.target.result);
+      renderImportPreview();
+    }catch(err){
+      document.getElementById('importPreview').innerHTML='<div class="status-msg error">❌ Ungültige JSON-Datei</div>';
+      importData=null;
+    }
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function renderImportPreview(){
+  if(!importData){return;}
+  const preview=document.getElementById('importPreview');
+
+  const meta=importData._meta;
+  const dateStr=meta&&meta.exportDate?new Date(meta.exportDate).toLocaleString('de-DE'):'Unbekannt';
+
+  const counts={
+    teilnehmer:importData.teilnehmer?Object.keys(importData.teilnehmer).length:0,
+    inventar:importData.inventar?Object.keys(importData.inventar).length:0,
+    vorschlaege:importData.vorschlaege?Object.keys(importData.vorschlaege).length:0,
+    abstimmung:importData.abstimmung?Object.keys(importData.abstimmung).length:0,
+  };
+
+  preview.innerHTML=`
+    <div class="backup-info" style="margin-top:16px">
+      <strong>📄 Backup vom:</strong> ${esc(dateStr)}<br>
+      <strong>👥 Teilnehmer:</strong> ${counts.teilnehmer} · 
+      <strong>🎲 Spiele:</strong> ${counts.inventar} · 
+      <strong>💡 Vorschläge:</strong> ${counts.vorschlaege} · 
+      <strong>🗳️ Abstimmungen:</strong> ${counts.abstimmung}
+    </div>
+    <button class="backup-btn danger" onclick="restoreBackup()">
+      ⚠️ Backup jetzt wiederherstellen
+    </button>
+  `;
+}
+
+async function restoreBackup(){
+  if(!importData)return;
+  if(!confirm('Bist du sicher? Alle aktuellen Daten werden überschrieben!'))return;
+  if(!confirm('Wirklich? Diese Aktion kann NICHT rückgängig gemacht werden.'))return;
+
+  const status=document.getElementById('importStatus');
+  status.innerHTML='<div class="status-msg" style="background:var(--wood-dim);color:var(--wood)">⏳ Stelle Daten wieder her…</div>';
+
+  try{
+    const updates={};
+    if(importData.teilnehmer!==undefined) updates['/teilnehmer']=importData.teilnehmer;
+    if(importData.inventar!==undefined) updates['/inventar']=importData.inventar;
+    if(importData.vorschlaege!==undefined) updates['/vorschlaege']=importData.vorschlaege;
+    if(importData.abstimmung!==undefined) updates['/abstimmung']=importData.abstimmung;
+    if(importData.umfrage!==undefined) updates['/umfrage']=importData.umfrage;
+
+    await db.ref().update(updates);
+
+    status.innerHTML='<div class="status-msg success">✅ Backup erfolgreich wiederhergestellt!</div>';
+    showToast('Daten wiederhergestellt!');
+    loadStats();
+  }catch(e){
+    console.error(e);
+    status.innerHTML='<div class="status-msg error">❌ Fehler beim Wiederherstellen</div>';
+  }
+}
+</script>
+</body>
+</html>

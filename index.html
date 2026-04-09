@@ -43,7 +43,88 @@
   .results-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
   .results-count { font-size:13px; color:var(--text-dim); font-weight:600; }
 
-  @media(max-width:500px){ .option-grid{grid-template-columns:1fr 1fr;} }
+  /* Spielewunsch */
+  .wish-form { display:flex; flex-direction:column; gap:10px; }
+  .wish-form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .wish-submit {
+    width:100%; background:var(--teal); border:none; border-radius:10px;
+    padding:12px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700;
+    color:#fff; cursor:pointer; transition:all 0.2s;
+    box-shadow:0 2px 8px rgba(42,125,110,0.2);
+  }
+  .wish-submit:hover { box-shadow:0 4px 20px rgba(42,125,110,0.3); transform:translateY(-1px); }
+
+  .wish-card {
+    background:var(--bg-warm); border:1.5px solid var(--border);
+    border-radius:12px; padding:16px; margin-bottom:12px; transition:border-color 0.2s;
+  }
+  .wish-card:hover { border-color:rgba(42,125,110,0.3); }
+  .wish-card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .wish-card-info { flex:1; }
+  .wish-card-title {
+    font-family:'Fraunces',serif; font-weight:700; font-size:17px; color:var(--text); margin-bottom:4px;
+  }
+  .wish-card-meta { font-size:12px; color:var(--text-dim); font-weight:600; display:flex; gap:12px; flex-wrap:wrap; }
+  .wish-card-note { font-size:12px; color:var(--text-mid); font-style:italic; margin-top:6px; }
+  .wish-card-by { font-size:11px; color:var(--teal); font-weight:700; margin-top:6px; }
+  .wish-card-actions { display:flex; gap:6px; flex-shrink:0; }
+  .wish-card-actions button {
+    background:none; border:none; color:var(--text-dim); cursor:pointer;
+    font-size:14px; padding:4px 6px; border-radius:5px; transition:all 0.15s;
+  }
+  .wish-card-actions button:hover { color:var(--danger); background:var(--danger-dim); }
+
+  .wish-players-section { margin-top:12px; padding-top:10px; border-top:1px solid var(--border-light); }
+  .wish-players-label { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
+  .wish-players-bar { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .wish-player-chip {
+    display:inline-flex; align-items:center; gap:4px;
+    background:var(--teal-dim); border:1px solid rgba(42,125,110,0.2);
+    padding:4px 10px; border-radius:7px; font-size:12px; font-weight:600; color:var(--teal);
+  }
+  .wish-player-chip .remove-x {
+    cursor:pointer; font-weight:700; margin-left:2px; transition:color 0.15s;
+  }
+  .wish-player-chip .remove-x:hover { color:var(--danger); }
+  .wish-join-btn {
+    background:var(--teal-dim); border:1.5px solid rgba(42,125,110,0.25);
+    border-radius:7px; padding:4px 12px; font-family:'Nunito',sans-serif;
+    font-size:12px; font-weight:700; color:var(--teal);
+    cursor:pointer; transition:all 0.2s;
+  }
+  .wish-join-btn:hover { background:rgba(42,125,110,0.15); }
+  .wish-slots {
+    font-size:11px; color:var(--text-dim); font-weight:600; margin-left:4px;
+  }
+  .wish-slots.full { color:var(--danger); }
+  select.form-input {
+    appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239c8b78' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
+    padding-right:32px; cursor:pointer;
+  }
+
+  /* Join Modal */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:16px; padding:28px; width:100%; max-width:360px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.15);
+  }
+  .modal h2 { font-family:'Fraunces',serif; font-size:18px; font-weight:700; margin-bottom:16px; }
+  .modal-actions { display:flex; gap:10px; margin-top:16px; }
+  .modal-actions button { flex:1; padding:12px; border-radius:10px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .modal-save { background:var(--teal); border:none; color:#fff; }
+  .modal-save:hover { box-shadow:0 4px 16px rgba(42,125,110,0.3); }
+  .modal-cancel { background:var(--bg-warm); border:1.5px solid var(--border); color:var(--text-mid); }
+  .modal-cancel:hover { border-color:var(--text-dim); }
+
+  @media(max-width:500px){ .option-grid{grid-template-columns:1fr 1fr;} .wish-form-row{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -71,8 +152,8 @@
 
   <div class="card fade-in delay-1">
     <div class="card-title">🧑‍🤝‍🧑 Dein Name</div>
+    <input class="search-input" id="nameSearch" placeholder="🔍 Name suchen…" oninput="renderNames()" style="margin-bottom:12px;">
     <div class="name-grid" id="nameGrid"></div>
-
   </div>
 
   <div class="card fade-in delay-2">
@@ -90,6 +171,45 @@
       <div class="results-count" id="resultsCount"></div>
     </div>
     <div id="resultsList"><div class="no-results">Lade Daten…</div></div>
+  </div>
+
+  <!-- Spielewunsch -->
+  <div class="card fade-in delay-3" style="margin-top:28px;">
+    <div class="card-title">🎲 Spielewunsch – Was möchtest du spielen?</div>
+    <div class="wish-form">
+      <div class="wish-form-row">
+        <select class="form-input" id="wishName">
+          <option value="" disabled selected>Dein Name *</option>
+        </select>
+        <input class="form-input" id="wishGame" placeholder="Spielname *" maxlength="60">
+      </div>
+      <div class="wish-form-row">
+        <input class="form-input" id="wishPlayers" type="number" placeholder="Spieleranzahl *" min="2" max="20">
+        <input class="form-input" id="wishTime" type="time" min="14:00" max="22:00" step="1800" style="cursor:pointer;">
+      </div>
+      <input class="form-input" id="wishNote" placeholder="Bemerkung (optional)" maxlength="100">
+      <button class="wish-submit" onclick="addWish()">🎲 Spielewunsch eintragen</button>
+    </div>
+  </div>
+
+  <div class="card fade-in delay-3" style="margin-top:20px;">
+    <div class="card-title">📋 Aktuelle Spielewünsche</div>
+    <div id="wishList"><div class="no-results">Lade Spielewünsche…</div></div>
+  </div>
+</div>
+
+<!-- Join Modal -->
+<div class="modal-overlay" id="joinModal">
+  <div class="modal">
+    <h2>🎲 Mitspielen</h2>
+    <p style="font-size:13px;color:var(--text-mid);margin-bottom:12px;" id="joinGameLabel"></p>
+    <select class="form-input" id="joinName" style="width:100%">
+      <option value="" disabled selected>Dein Name wählen…</option>
+    </select>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeJoinModal()">Abbrechen</button>
+      <button class="modal-save" onclick="confirmJoin()">🎲 Mitspielen</button>
+    </div>
   </div>
 </div>
 
@@ -137,7 +257,15 @@ getDbRef().on('value',snap=>{
 
 async function saveToFirebase(){try{await getDbRef().set({votes});}catch(e){showToast('Fehler beim Speichern!');}}
 
-function renderNames(){document.getElementById('nameGrid').innerHTML=DEFAULT_NAMES.map(n=>`<button class="name-btn ${selectedName===n?'selected':''}" onclick="selectName('${n.replace(/'/g,"\\'")}')">${esc(n)}</button>`).join('');}
+function renderNames(){
+  const searchEl=document.getElementById('nameSearch');
+  const query=searchEl?searchEl.value.toLowerCase().trim():'';
+  let filtered=DEFAULT_NAMES;
+  if(query) filtered=DEFAULT_NAMES.filter(n=>n.toLowerCase().includes(query));
+  document.getElementById('nameGrid').innerHTML=filtered.length
+    ?filtered.map(n=>`<button class="name-btn ${selectedName===n?'selected':''}" onclick="selectName('${n.replace(/'/g,"\\'")}')">${esc(n)}</button>`).join('')
+    :'<div class="no-results" style="padding:12px">Kein Name gefunden</div>';
+}
 function renderOptions(){document.getElementById('optionGrid').innerHTML=OPTIONS.map(o=>{const sel=selectedOption===o.value?'selected':'';return`<button class="option-btn ${sel}" data-type="${o.type}" onclick="selectOption('${o.value}')"><span class="icon">${o.icon}</span> ${esc(o.label)}</button>`;}).join('');}
 function getOptionMeta(v){return OPTIONS.find(x=>x.value===v)||{label:v,icon:'',type:'time'};}
 function renderResults(){
@@ -151,12 +279,173 @@ function renderResults(){
   h+='</tbody></table>';list.innerHTML=h;
 }
 function updateSubmitBtn(){document.getElementById('submitBtn').disabled=!(selectedName&&selectedOption);}
-function selectName(n){selectedName=n;renderNames();updateSubmitBtn();}
+function selectName(n){selectedName=n;const s=document.getElementById('nameSearch');if(s)s.value='';renderNames();updateSubmitBtn();}
 function selectOption(v){selectedOption=v;renderOptions();updateSubmitBtn();}
 
 async function submitVote(){if(!selectedName||!selectedOption)return;const ex=votes.findIndex(v=>v.name===selectedName),m=getOptionMeta(selectedOption);if(ex!==-1){votes[ex].option=selectedOption;showToast(`${selectedName} aktualisiert → ${m.label}`);}else{votes.push({name:selectedName,option:selectedOption});showToast(`${selectedName} → ${m.label}`);}await saveToFirebase();selectedName=null;selectedOption=null;renderNames();renderOptions();updateSubmitBtn();}
 async function deleteVote(n,ov){const i=votes.findIndex(v=>v.name===n&&v.option===ov);if(i===-1)return;votes.splice(i,1);await saveToFirebase();showToast(`${n} entfernt`);}
-renderNames();renderOptions();
+renderOptions();
+onNamesReady(()=>{
+  renderNames();
+  // Spielewunsch Name-Dropdown befüllen
+  const wishSel=document.getElementById('wishName');
+  DEFAULT_NAMES.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;wishSel.appendChild(o);});
+});
+
+// ═══ SPIELEWUNSCH ═══
+let wishes=[];
+
+function getWishRef(){return db.ref('spielewunsch/'+getResetWeekId());}
+
+getWishRef().on('value',snap=>{
+  const data=snap.val();
+  wishes=data?Object.entries(data).map(([id,w])=>({id,...w})):[];
+  renderWishes();
+});
+
+function renderWishes(){
+  const list=document.getElementById('wishList');
+  if(!wishes.length){list.innerHTML='<div class="no-results">Noch keine Spielewünsche diese Woche</div>';return;}
+
+  list.innerHTML=wishes.map(w=>{
+    const maxP=w.maxPlayers||2;
+    const players=w.joinedPlayers||[];
+    const slotsLeft=maxP-1-players.length; // -1 because creator is already counted
+    const isFull=slotsLeft<=0;
+
+    let playerChips=`<span class="wish-player-chip">${esc(w.createdBy)} ⭐</span>`;
+    players.forEach(p=>{
+      playerChips+=`<span class="wish-player-chip">${esc(p)}<span class="remove-x" onclick="leaveWish('${w.id}','${p.replace(/'/g,"\\'")}')">✕</span></span>`;
+    });
+
+    const slotsText=isFull
+      ?`<span class="wish-slots full">Voll!</span>`
+      :`<span class="wish-slots">${slotsLeft} Platz${slotsLeft>1?'ä':''}tze frei</span>`;
+
+    const joinBtn=isFull?'':`<button class="wish-join-btn" onclick="joinWish('${w.id}')">+ Mitspielen</button>`;
+
+    return`<div class="wish-card">
+      <div class="wish-card-header">
+        <div class="wish-card-info">
+          <div class="wish-card-title">${esc(w.game)}</div>
+          <div class="wish-card-meta">
+            <span>👥 ${players.length+1}/${maxP} Spieler</span>
+            ${w.time?`<span>🕐 ${esc(w.time)} Uhr</span>`:''}
+          </div>
+          ${w.note?`<div class="wish-card-note">"${esc(w.note)}"</div>`:''}
+          <div class="wish-card-by">Erstellt von ${esc(w.createdBy)}</div>
+        </div>
+        <div class="wish-card-actions">
+          <button onclick="deleteWish('${w.id}')" title="Löschen">✕</button>
+        </div>
+      </div>
+      <div class="wish-players-section">
+        <div class="wish-players-label">Mitspieler ${slotsText}</div>
+        <div class="wish-players-bar">
+          ${playerChips}
+          ${joinBtn}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addWish(){
+  const name=document.getElementById('wishName').value;
+  const game=document.getElementById('wishGame').value.trim();
+  const maxPlayers=parseInt(document.getElementById('wishPlayers').value)||0;
+  const time=document.getElementById('wishTime').value.trim();
+  const note=document.getElementById('wishNote').value.trim();
+
+  if(!name||!game||!maxPlayers){showToast('Bitte Name, Spiel und Spieleranzahl angeben!');return;}
+
+  const wish={
+    createdBy:name, game, maxPlayers,
+    time:time||null, note:note||null,
+    joinedPlayers:[], addedAt:new Date().toISOString()
+  };
+
+  try{
+    await getWishRef().push(wish);
+    showToast(`"${game}" eingetragen!`);
+    document.getElementById('wishGame').value='';
+    document.getElementById('wishPlayers').value='';
+    document.getElementById('wishTime').value='';
+    document.getElementById('wishNote').value='';
+    document.getElementById('wishName').selectedIndex=0;
+  }catch(e){showToast('Fehler beim Speichern!');}
+}
+
+let joiningWishId=null;
+
+function joinWish(wishId){
+  const w=wishes.find(x=>x.id===wishId);
+  if(!w)return;
+  const maxP=w.maxPlayers||2;
+  const players=w.joinedPlayers||[];
+  if(players.length+1>=maxP){showToast('Alle Plätze sind belegt!');return;}
+
+  joiningWishId=wishId;
+
+  // Dropdown befüllen, bereits eingetragene Namen ausfiltern
+  const sel=document.getElementById('joinName');
+  while(sel.options.length>1) sel.remove(1);
+  DEFAULT_NAMES.forEach(n=>{
+    if(n===w.createdBy||players.includes(n)) return;
+    const o=document.createElement('option');
+    o.value=n; o.textContent=n;
+    sel.appendChild(o);
+  });
+  sel.selectedIndex=0;
+  document.getElementById('joinGameLabel').textContent=`Bei "${w.game}" mitspielen`;
+  document.getElementById('joinModal').classList.add('open');
+}
+
+function closeJoinModal(){
+  document.getElementById('joinModal').classList.remove('open');
+  joiningWishId=null;
+}
+
+async function confirmJoin(){
+  if(!joiningWishId)return;
+  const name=document.getElementById('joinName').value;
+  if(!name){showToast('Bitte einen Namen wählen!');return;}
+
+  const w=wishes.find(x=>x.id===joiningWishId);
+  if(!w)return;
+
+  const players=w.joinedPlayers||[];
+  if(players.includes(name)){showToast(`${name} ist bereits eingetragen!`);return;}
+  if(name===w.createdBy){showToast('Du hast dieses Spiel erstellt!');return;}
+
+  const maxP=w.maxPlayers||2;
+  if(players.length+1>=maxP){showToast('Alle Plätze sind belegt!');return;}
+
+  players.push(name);
+  try{
+    await getWishRef().child(joiningWishId).update({joinedPlayers:players});
+    showToast(`${name} spielt mit bei "${w.game}"!`);
+    closeJoinModal();
+  }catch(e){showToast('Fehler!');}
+}
+
+// Close modal on backdrop click
+document.getElementById('joinModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeJoinModal();});
+
+async function leaveWish(wishId,playerName){
+  const w=wishes.find(x=>x.id===wishId);
+  if(!w)return;
+  const players=(w.joinedPlayers||[]).filter(p=>p!==playerName);
+  try{
+    await getWishRef().child(wishId).update({joinedPlayers:players});
+    showToast(`${playerName} hat "${w.game}" verlassen`);
+  }catch(e){showToast('Fehler!');}
+}
+
+async function deleteWish(wishId){
+  if(!confirm('Spielewunsch wirklich löschen?'))return;
+  try{await getWishRef().child(wishId).remove();showToast('Spielewunsch entfernt');}catch(e){showToast('Fehler!');}
+}
 
 // Nächsten Mittwoch berechnen
 (function(){
