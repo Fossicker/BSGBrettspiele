@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚙️ Verwaltung · Brettspiel-Abend</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .admin-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .admin-card:hover {
+    border-color: var(--wood-light);
+    background: var(--surface-hover);
+    box-shadow: 0 6px 24px rgba(139,94,52,0.12);
+    transform: translateY(-2px);
+  }
+  .admin-card-icon {
+    font-size: 36px;
+    line-height: 1;
+  }
+  .admin-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .admin-card-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .admin-card-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    align-self: flex-start;
+  }
+  .badge-wood   { background: var(--wood-dim);   color: var(--wood); }
+  .badge-teal   { background: var(--teal-dim);   color: var(--teal); }
+  .badge-amber  { background: var(--amber-dim);  color: var(--amber); }
+  .badge-blue   { background: var(--blue-dim);   color: var(--blue); }
+
+  @media(max-width:500px) { .admin-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <a href="index.html" class="nav-link"><span class="nav-icon">🎲</span>Umfrage</a>
+  <a href="inventar.html" class="nav-link"><span class="nav-icon">📦</span>Inventar</a>
+  <a href="vorschlaege.html" class="nav-link"><span class="nav-icon">💡</span>Vorschläge</a>
+  <a href="abstimmung.html" class="nav-link"><span class="nav-icon">🗳️</span>Abstimmung</a>
+  <a href="impressum.html" class="nav-link"><span class="nav-icon">⚖️</span>Impressum</a>
+  <a href="verwaltung.html" class="nav-link active"><span class="nav-icon">⚙️</span>Verwaltung</a>
+</div></nav>
+
+<div class="app">
+  <div class="header fade-in">
+    <div class="tag">⚙️ Administration</div>
+    <h1>Verwaltung</h1>
+    <p>Importiere Daten, verwalte Teilnehmer und sichere die Datenbank.</p>
+  </div>
+
+  <div class="card fade-in delay-1">
+    <div class="card-title">🗂️ Übersicht</div>
+    <div class="admin-grid">
+
+      <a href="csv-import-teilnehmer.html" class="admin-card">
+        <div class="admin-card-icon">👥</div>
+        <div class="admin-card-title">Teilnehmer verwalten</div>
+        <div class="admin-card-desc">Teilnehmerliste anzeigen und neue Teilnehmer per CSV-Import hinzufügen.</div>
+        <span class="admin-card-badge badge-wood">CSV-Import</span>
+      </a>
+
+      <a href="csv-import-vorschlaege.html" class="admin-card">
+        <div class="admin-card-icon">💡</div>
+        <div class="admin-card-title">Vorschläge importieren</div>
+        <div class="admin-card-desc">Spielvorschläge aus einer CSV-Datei in die Datenbank importieren.</div>
+        <span class="admin-card-badge badge-amber">CSV-Import</span>
+      </a>
+
+      <a href="csv-import.html" class="admin-card">
+        <div class="admin-card-icon">📦</div>
+        <div class="admin-card-title">Inventar importieren</div>
+        <div class="admin-card-desc">Spielinventar aus einer CSV-Datei importieren und aktualisieren.</div>
+        <span class="admin-card-badge badge-teal">CSV-Import</span>
+      </a>
+
+      <a href="backup.html" class="admin-card">
+        <div class="admin-card-icon">🔒</div>
+        <div class="admin-card-title">Backup & Restore</div>
+        <div class="admin-card-desc">Gesamte Datenbank als JSON exportieren oder einen früheren Stand wiederherstellen.</div>
+        <span class="admin-card-badge badge-blue">Datensicherung</span>
+      </a>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
