@@ -46,6 +46,8 @@
   /* Spielewunsch */
   .wish-form { display:flex; flex-direction:column; gap:10px; }
   .wish-form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .wish-field { display:flex; flex-direction:column; gap:6px; }
+  .wish-field-hint { font-size:11px; color:var(--text-dim); font-weight:600; padding-left:2px; }
   .wish-submit {
     width:100%; background:var(--teal); border:none; border-radius:10px;
     padding:12px; font-family:'Nunito',sans-serif; font-size:14px; font-weight:700;
@@ -181,7 +183,11 @@
         <select class="form-input" id="wishName">
           <option value="" disabled selected>Dein Name *</option>
         </select>
-        <input class="form-input" id="wishGame" placeholder="Spielname *" maxlength="60">
+        <div class="wish-field">
+          <input class="form-input" id="wishGame" list="wishGameList" placeholder="Spielname" maxlength="60">
+          <datalist id="wishGameList"></datalist>
+          <div class="wish-field-hint">Aus dem Inventar auswählen oder eigenen Spielenamen eingeben</div>
+        </div>
       </div>
       <div class="wish-form-row">
         <input class="form-input" id="wishPlayers" type="number" placeholder="Spieleranzahl *" min="2" max="20">
@@ -283,11 +289,28 @@ function selectOption(v){selectedOption=v;renderOptions();updateSubmitBtn();}
 async function submitVote(){if(!selectedName||!selectedOption)return;const ex=votes.findIndex(v=>v.name===selectedName),m=getOptionMeta(selectedOption);if(ex!==-1){votes[ex].option=selectedOption;showToast(`${selectedName} aktualisiert → ${m.label}`);}else{votes.push({name:selectedName,option:selectedOption});showToast(`${selectedName} → ${m.label}`);}await saveToFirebase();selectedName=null;selectedOption=null;renderNames();renderOptions();updateSubmitBtn();}
 async function deleteVote(n,ov){const i=votes.findIndex(v=>v.name===n&&v.option===ov);if(i===-1)return;votes.splice(i,1);await saveToFirebase();showToast(`${n} entfernt`);}
 renderOptions();
+
+let INVENTAR_GAMES=[];
+function getInventarRef(){return db.ref('inventar');}
+function populateGameSuggestions(){
+  const list=document.getElementById('wishGameList');
+  if(!list) return;
+  list.innerHTML='';
+  const uniqueNames=[...new Set(INVENTAR_GAMES.map(n=>n.trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de',{sensitivity:'base'}));
+  uniqueNames.forEach(name=>{const o=document.createElement('option');o.value=name;list.appendChild(o);});
+}
+getInventarRef().on('value',snap=>{
+  const data=snap.val();
+  INVENTAR_GAMES=data?Object.values(data).map(g=>g&&g.name?g.name:'').filter(Boolean):[];
+  populateGameSuggestions();
+});
+
 onNamesReady(()=>{
   renderNames();
   // Spielewunsch Name-Dropdown befüllen
   const wishSel=document.getElementById('wishName');
   DEFAULT_NAMES.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;wishSel.appendChild(o);});
+  populateGameSuggestions();
 });
 
 // ═══ SPIELEWUNSCH ═══
