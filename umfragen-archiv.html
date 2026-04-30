@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🗓️ Brettspiel-Abend · Umfragen-Archiv</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .header .tag { color:var(--amber); background:var(--amber-dim); border-color:rgba(212,148,10,0.15); }
+
+  .archive-table {
+    width:100%; border-collapse:separate; border-spacing:0;
+    border-radius:12px; border:1.5px solid var(--border); overflow:hidden;
+  }
+  .archive-table thead th {
+    background:var(--bg-warm); padding:12px 14px;
+    font-size:11px; font-weight:700; letter-spacing:1.2px;
+    text-transform:uppercase; color:var(--amber);
+    text-align:left; border-bottom:1.5px solid var(--border);
+  }
+  .archive-table tbody tr { transition:background 0.15s; }
+  .archive-table tbody td {
+    padding:12px 14px; font-size:13px;
+    border-bottom:1px solid var(--border-light); vertical-align:middle;
+  }
+  .archive-table tbody tr:last-child td { border-bottom:none; }
+
+  .week-row { cursor:pointer; }
+  .week-row:hover { background:rgba(212,148,10,0.04) !important; }
+
+  .week-date { font-weight:700; font-size:14px; }
+  .week-date-sub { font-size:11px; color:var(--text-dim); font-weight:600; margin-top:2px; }
+
+  .detail-row td {
+    padding:0 !important;
+    border-bottom:1px solid var(--border-light) !important;
+  }
+  .detail-content {
+    max-height:0; overflow:hidden;
+    transition:max-height 0.35s ease, padding 0.35s ease;
+    padding:0 14px;
+  }
+  .detail-content.open {
+    max-height:500px;
+    padding:14px;
+  }
+
+  .expand-icon {
+    display:inline-block; font-size:11px; color:var(--text-dim);
+    transition:transform 0.25s; margin-right:6px;
+  }
+  .expand-icon.open { transform:rotate(90deg); }
+
+  .participant-list { display:flex; flex-wrap:wrap; gap:6px; }
+  .participant-chip {
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--bg-warm); border:1px solid var(--border);
+    padding:5px 10px; border-radius:9px;
+    font-size:12px; font-weight:600; color:var(--text);
+  }
+  .p-option {
+    font-size:11px; font-weight:700; white-space:nowrap;
+    padding:2px 6px; border-radius:5px;
+  }
+  .p-opt-time   { background:var(--wood-dim);  color:var(--wood); }
+  .p-opt-later  { background:var(--amber-dim); color:var(--amber); }
+  .p-opt-tbd    { background:var(--blue-dim);  color:var(--blue); }
+  .p-opt-no     { background:var(--rust-dim);  color:var(--rust); }
+
+  .detail-summary {
+    font-size:12px; color:var(--text-dim); font-weight:600;
+    margin-bottom:10px;
+    display:flex; gap:12px; flex-wrap:wrap;
+  }
+  .summary-chip {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700;
+  }
+
+  .count-amber { background:var(--amber-dim); color:var(--amber); }
+
+  .no-votes { color:var(--text-dim); font-size:13px; font-style:italic; }
+
+  @media(max-width:480px) {
+    .week-date { font-size:13px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-inner">
+  <a href="index.html" class="nav-link"><span class="nav-icon">🎲</span>Umfrage</a>
+  <a href="inventar.html" class="nav-link"><span class="nav-icon">📦</span>Inventar</a>
+  <a href="vorschlaege.html" class="nav-link"><span class="nav-icon">💡</span>Vorschläge</a>
+  <a href="abstimmung.html" class="nav-link"><span class="nav-icon">🗳️</span>Abstimmung</a>
+  <a href="impressum.html" class="nav-link"><span class="nav-icon">⚖️</span>Impressum</a>
+</div></nav>
+
+<div class="app">
+  <div class="header fade-in">
+    <div class="tag">🗓️ Archiv</div>
+    <h1>Mittwochsumfragen</h1>
+    <p>Alle bisherigen wöchentlichen Umfragen im Überblick.</p>
+  </div>
+
+  <div class="card fade-in delay-1">
+    <div class="card-title">📅 Alle Umfragen</div>
+    <div id="archiveContent"><div class="no-results">Lade Daten…</div></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+const OPTIONS = [
+  {label:'15:30 Uhr',  value:'15:30',              icon:'🕒', type:'time'},
+  {label:'16:00 Uhr',  value:'16:00',              icon:'🕓', type:'time'},
+  {label:'16:30 Uhr',  value:'16:30',              icon:'🕓', type:'time'},
+  {label:'17:00 Uhr',  value:'17:00',              icon:'🕔', type:'time'},
+  {label:'17:30 Uhr',  value:'17:30',              icon:'🕔', type:'time'},
+  {label:'Später',     value:'Spaeter',            icon:'⏳', type:'later'},
+  {label:'Sage noch Bescheid', value:'Sage_noch_Bescheid', icon:'💬', type:'tbd'},
+  {label:'Kann leider nicht',  value:'Kann_leider_nicht',  icon:'✗',  type:'no'},
+];
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function getOptionMeta(v) {
+  return OPTIONS.find(x => x.value === v) || {label: v, icon: '', type: 'time'};
+}
+
+// The DB key is the Thursday that starts the week.
+// The corresponding Wednesday is 6 days later.
+function thurKeyToWednesday(thurKey) {
+  const parts = thurKey.split('-').map(Number);
+  const thu = new Date(parts[0], parts[1] - 1, parts[2]);
+  thu.setDate(thu.getDate() + 6);
+  return thu;
+}
+
+function formatDate(d) {
+  const dd   = String(d.getDate()).padStart(2, '0');
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `Mittwoch, ${dd}.${mm}.${yyyy}`;
+}
+
+function toggleWeek(id) {
+  const content = document.getElementById('detail-' + id);
+  const icon    = document.getElementById('icon-' + id);
+  if (!content) return;
+  const isOpen = content.classList.contains('open');
+  // collapse all first
+  document.querySelectorAll('.detail-content').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.expand-icon').forEach(el => el.classList.remove('open'));
+  if (!isOpen) {
+    content.classList.add('open');
+    icon.classList.add('open');
+  }
+}
+
+db.ref('umfrage').once('value', snap => {
+  const data      = snap.val();
+  const container = document.getElementById('archiveContent');
+
+  if (!data || !Object.keys(data).length) {
+    container.innerHTML = '<div class="no-results">Keine Umfragen vorhanden</div>';
+    return;
+  }
+
+  const weeks = Object.entries(data)
+    .map(([thurKey, weekData]) => {
+      const wed   = thurKeyToWednesday(thurKey);
+      const votes = (weekData && weekData.votes)
+        ? Object.values(weekData.votes)
+        : [];
+      return { thurKey, wed, votes };
+    })
+    .sort((a, b) => b.wed - a.wed);
+
+  let html = `
+    <table class="archive-table">
+      <thead>
+        <tr>
+          <th>Tag</th>
+          <th style="text-align:center">Teilnehmer</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  weeks.forEach((w, i) => {
+    const id    = `w${i}`;
+    const count = w.votes.length;
+
+    // Only count people who can actually attend (not "no" and not "later")
+    const canCome = w.votes.filter(v => {
+      const m = getOptionMeta(v.option);
+      return m.type === 'time' || m.type === 'tbd';
+    }).length;
+
+    html += `
+        <tr class="week-row" onclick="toggleWeek('${id}')">
+          <td>
+            <div class="week-date">${esc(formatDate(w.wed))}</div>
+          </td>
+          <td style="text-align:center">
+            <span class="count-badge count-amber">${canCome}</span>
+          </td>
+          <td style="text-align:center">
+            <span class="expand-icon" id="icon-${id}">▶</span>
+          </td>
+        </tr>
+        <tr class="detail-row">
+          <td colspan="3">
+            <div class="detail-content" id="detail-${id}">`;
+
+    if (count === 0) {
+      html += '<div class="no-votes">Keine Einträge für diese Woche</div>';
+    } else {
+      // Summary line
+      const noCount  = w.votes.filter(v => getOptionMeta(v.option).type === 'no').length;
+      const tbdCount = w.votes.filter(v => getOptionMeta(v.option).type === 'tbd').length;
+
+      html += `<div class="detail-summary">
+        <span class="summary-chip" style="background:var(--wood-dim);color:var(--wood)">✔ ${canCome} können kommen</span>`;
+      if (tbdCount) html += `<span class="summary-chip" style="background:var(--blue-dim);color:var(--blue)">💬 ${tbdCount} unklar</span>`;
+      if (noCount)  html += `<span class="summary-chip" style="background:var(--rust-dim);color:var(--rust)">✗ ${noCount} können nicht</span>`;
+      html += `</div>`;
+
+      // Sort votes: time → later → tbd → no
+      const optOrder = ['time','later','tbd','no'];
+      const sorted = [...w.votes].sort((a, b) => {
+        const ai = optOrder.indexOf(getOptionMeta(a.option).type);
+        const bi = optOrder.indexOf(getOptionMeta(b.option).type);
+        if (ai !== bi) return ai - bi;
+        return a.name.localeCompare(b.name, 'de', {sensitivity:'base'});
+      });
+
+      html += '<div class="participant-list">';
+      sorted.forEach(v => {
+        const m   = getOptionMeta(v.option);
+        const cls = m.type === 'time'  ? 'p-opt-time'
+                  : m.type === 'later' ? 'p-opt-later'
+                  : m.type === 'tbd'   ? 'p-opt-tbd'
+                  :                      'p-opt-no';
+        html += `<span class="participant-chip">
+          ${esc(v.name)}
+          <span class="p-option ${cls}">${m.icon} ${esc(m.label)}</span>
+        </span>`;
+      });
+      html += '</div>';
+    }
+
+    html += `</div>
+          </td>
+        </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+});
+</script>
+</body>
+</html>
