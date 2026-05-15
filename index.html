@@ -341,7 +341,7 @@ function renderWishes(){
 
     const slotsText=isFull
       ?`<span class="wish-slots full">Voll!</span>`
-      :`<span class="wish-slots">${slotsLeft} Platz${slotsLeft>1?'ä':''}tze frei</span>`;
+      :`<span class="wish-slots">${slotsLeft} ${slotsLeft===1?'Platz':'Plätze'} frei</span>`;
 
     const joinBtn=isFull?'':`<button class="wish-join-btn" onclick="joinWish('${w.id}')">+ Mitspielen</button>`;
 
