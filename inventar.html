@@ -281,7 +281,7 @@ function inventarRows(list){
     const key=name.toLowerCase();
     if(!groups.has(key))groups.set(key,{name,count:0,remarks:[]});
     const e=groups.get(key);e.count++;
-    [g.origin,g.notes].forEach(r=>{r=(r||'').trim();if(r&&!e.remarks.includes(r))e.remarks.push(r);});
+    const o=(g.origin||'').trim();if(o&&!e.remarks.includes(o))e.remarks.push(o);
   });
   return[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'de'));
 }
