@@ -65,6 +65,13 @@
   .mobile-cards { display:block; }
   @media(min-width:700px) { .desktop-table{display:block;} .mobile-cards{display:none;} }
 
+  .export-btn {
+    background:var(--teal-dim); border:1.5px solid rgba(42,125,110,0.25); border-radius:10px;
+    padding:10px 14px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700;
+    color:var(--teal); cursor:pointer; white-space:nowrap; transition:all 0.2s;
+  }
+  .export-btn:hover { background:rgba(42,125,110,0.18); }
+  .export-btn:disabled { opacity:0.6; cursor:wait; }
   .sort-bar { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
   .sort-chip { background:var(--bg-warm); border:1.5px solid var(--border); border-radius:8px; padding:6px 12px; font-family:'Nunito',sans-serif; font-size:11px; font-weight:700; color:var(--text-dim); cursor:pointer; transition:all 0.2s; }
   .sort-chip:hover { border-color:var(--teal); color:var(--teal); }
@@ -135,6 +142,7 @@
     <div class="search-row">
       <input class="search-input" id="searchInput" placeholder="🔍 Spiel suchen…" oninput="renderGames()">
       <span class="game-count" id="gameCount"></span>
+      <button class="export-btn" id="exportBtn" onclick="exportWord()" title="Inventarverzeichnis als Word-Datei herunterladen">📄 Word-Export</button>
     </div>
     <div class="sort-bar" id="sortBar"></div>
     <div class="desktop-table" id="desktopTable"></div>
@@ -258,6 +266,69 @@ function renderMobileCards(filtered,query){
 }
 
 function sortBy(col){if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}renderGames();}
+
+// ═══ WORD-EXPORT ═══
+// Aufbau nach Vorlage "Inventarverzeichnis" (BSG DRVBUND e.V.): Kopf mit Logo, Abteilung, Stand, Tabelle Anzahl/Gegenstand/Bemerkungen
+const DOCX_URL='https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js';
+function loadDocxLib(){
+  if(window.docx)return Promise.resolve(window.docx);
+  return new Promise((res,rej)=>{const s=document.createElement('script');s.src=DOCX_URL;s.onload=()=>res(window.docx);s.onerror=rej;document.head.appendChild(s);});
+}
+function inventarRows(list){
+  const groups=new Map();
+  list.forEach(g=>{
+    const name=(g.name||'').trim();if(!name)return;
+    const key=name.toLowerCase();
+    if(!groups.has(key))groups.set(key,{name,count:0,remarks:[]});
+    const e=groups.get(key);e.count++;
+    [g.origin,g.notes].forEach(r=>{r=(r||'').trim();if(r&&!e.remarks.includes(r))e.remarks.push(r);});
+  });
+  return[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'de'));
+}
+function buildInventarDoc(d,list,logo){
+  const{Document,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,BorderStyle,AlignmentType,VerticalAlign,HeightRule,ImageRun,TableLayoutType}=d;
+  const font='Arial',none={style:BorderStyle.NONE,size:0,color:'FFFFFF'},line={style:BorderStyle.SINGLE,size:4,color:'000000'};
+  const noBorders={top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none};
+  const p=(text,o={})=>new Paragraph({alignment:o.align,children:[new TextRun({text,font,bold:o.bold,size:o.size||24})]});
+  const today=new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const head=new Table({width:{size:10034,type:WidthType.DXA},columnWidths:[6449,3585],layout:TableLayoutType.FIXED,borders:noBorders,rows:[new TableRow({children:[
+    new TableCell({width:{size:6449,type:WidthType.DXA},verticalAlign:VerticalAlign.BOTTOM,borders:{top:none,left:none,right:none,bottom:{style:BorderStyle.SINGLE,size:12,color:'000000'}},children:[p('BSG DRVBUND e.V.',{bold:true,size:60}),p('',{size:16})]}),
+    new TableCell({width:{size:3585,type:WidthType.DXA},borders:{top:none,left:none,right:none,bottom:{style:BorderStyle.SINGLE,size:12,color:'000000'}},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:logo?[new ImageRun({data:logo,transformation:{width:171,height:66}})]:[]})]}),
+  ]})]});
+  const dept=new Table({width:{size:5637,type:WidthType.DXA},columnWidths:[1403,4234],layout:TableLayoutType.FIXED,borders:noBorders,rows:[new TableRow({children:[
+    new TableCell({width:{size:1403,type:WidthType.DXA},borders:noBorders,children:[p('Abteilung:',{bold:true})]}),
+    new TableCell({width:{size:4234,type:WidthType.DXA},borders:{top:none,left:none,right:none,bottom:{style:BorderStyle.SINGLE,size:8,color:'000000'}},children:[p('Brettspiele',{bold:true})]}),
+  ]})]});
+
+  const W=[1204,5812,2977],borders={top:line,bottom:line,left:line,right:line};
+  const cell=(text,i,o={})=>new TableCell({width:{size:W[i],type:WidthType.DXA},borders,verticalAlign:VerticalAlign.CENTER,margins:{left:70,right:70},children:[p(text,o)]});
+  const rows=inventarRows(list).map(r=>new TableRow({height:{value:700,rule:HeightRule.ATLEAST},cantSplit:true,children:[cell(String(r.count),0,{align:AlignmentType.CENTER}),cell(r.name,1),cell(r.remarks.join('; '),2)]}));
+  const table=new Table({width:{size:9993,type:WidthType.DXA},columnWidths:W,layout:TableLayoutType.FIXED,rows:[
+    new TableRow({tableHeader:true,height:{value:600,rule:HeightRule.EXACT},children:['Anzahl','Gegenstand','Bemerkungen'].map((t,i)=>cell(t,i,{bold:true,size:32,align:AlignmentType.CENTER}))}),
+    ...rows]});
+
+  return new Document({
+    creator:'BSG DRVBUND e.V. · Brettspiele',title:'Inventarverzeichnis',
+    styles:{default:{document:{run:{font,size:22}}}},
+    sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:567,bottom:568,left:1417,right:1417}}},
+      children:[head,p(''),dept,p(''),p(''),p('Inventarverzeichnis',{size:32,align:AlignmentType.CENTER}),p('',{align:AlignmentType.CENTER}),p(`(Stand: ${today})`,{align:AlignmentType.CENTER}),p(''),table,p('')]}],
+  });
+}
+async function exportWord(){
+  if(!games.length){showToast('Keine Spiele zum Exportieren!');return;}
+  const btn=document.getElementById('exportBtn');btn.disabled=true;
+  try{
+    const d=await loadDocxLib();
+    let logo=null;try{const r=await fetch('bsg-logo.jpg');if(r.ok)logo=await r.arrayBuffer();}catch(e){}
+    const blob=await d.Packer.toBlob(buildInventarDoc(d,games,logo));
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=`Inventarverzeichnis_${new Date().toISOString().slice(0,10)}.docx`;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    showToast('Word-Datei erstellt!');
+  }catch(e){console.error(e);showToast('Fehler beim Word-Export!');}
+  finally{btn.disabled=false;}
+}
 
 // ═══ ADD ═══
 async function addGame(){
